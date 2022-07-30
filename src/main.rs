@@ -3,6 +3,7 @@ use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::{str, string, time::SystemTime};
 
 mod db;
+mod hb;
 
 const SL_OFFSET: usize = 15;
 const DMRA: &[u8] = b"DMRA";
