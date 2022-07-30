@@ -26,6 +26,8 @@ const RPTO: &[u8] = b"RPTO";
 const RPTS: &[u8] = b"RPTS";
 const RPTSBKN: &[u8] = b"RPTSBKN";
 
+const SOFTWARE_VERSION: u64 = 1;
+
 enum Serverstate {
     Idle,
     Inuse,
@@ -103,21 +105,20 @@ fn echo(sock: &std::net::UdpSocket, dst: std::net::SocketAddr, data: &Vec<[u8; 5
 
 // Need to better handle close down gracefully but this will do for now.
 fn closedown() {
-        println!("Shutting Down, GoodBye!\n");
-       std::process::exit(0);
+    println!("Shutting Down, GoodBye!\n");
+    std::process::exit(0);
 }
 
 fn main() {
     println!("Loading...");
 
     // Check the DB!
-    let db = db::init();
-
+    let db = db::init(SOFTWARE_VERSION);
 
     ctrlc::set_handler(move || {
         closedown();
-    }).expect("Error setting Ctrl-C handler");
-
+    })
+    .expect("Error setting Ctrl-C handler");
 
     let sock = match UdpSocket::bind("0.0.0.0:5557") {
         Ok(s) => s,
@@ -135,7 +136,6 @@ fn main() {
     let mut logins: HashSet<u32> = HashSet::new();
 
     loop {
-
         clock(&mut logins, &mut mash);
         let mut rx_buff = [0; 500];
         let (_, src) = match sock.recv_from(&mut rx_buff) {
@@ -146,16 +146,16 @@ fn main() {
             }
         };
 
-        if !dvec.is_empty() {
-            replay_counter += 1;
-        }
-
         // If we have a message play it back
-        if !dvec.is_empty() && replay_counter > 2 {
+        if !dvec.is_empty() && replay_counter > 1 {
             replay_counter = 0;
             echo(&sock, src, &dvec);
             println!("echo");
             dvec.clear();
+        }
+
+        if !dvec.is_empty() {
+            replay_counter += 1;
         }
 
         match &rx_buff[..4] {
@@ -197,8 +197,10 @@ fn main() {
 
                 if d_counter > 32 {
                     d_counter = 0;
-                  println!("DEBUG: rf_src: {}, dest: {}, packet seq: {:x?} slot: {}, ctype: {}",
-                 rfs, did, packet_seq, slot, c_type);
+                    println!(
+                        "DEBUG: rf_src: {}, dest: {}, packet seq: {:x?} slot: {}, ctype: {}",
+                        rfs, did, packet_seq, slot, c_type
+                    );
                 }
                 let tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
                 // Repeat to peers who are members of the same talkgroup
@@ -240,10 +242,11 @@ fn main() {
             RPTL => {
                 let mut peer = Peer::new();
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
-                let randid = [0x0A,0x7E,0xD4, 0x98];
+                let randid = [0x0A, 0x7E, 0xD4, 0x98];
                 println!("Sending Ack: {}", src);
                 println!("Repeater Login Request: {:x?}", rx_buff);
-                sock.send_to(&[RPTACK, &rx_buff[4..8], &randid].concat(), src).unwrap();
+                sock.send_to(&[RPTACK, &rx_buff[4..8], &randid].concat(), src)
+                    .unwrap();
             }
             RPTPING => {
                 println!("Todo!6");
@@ -259,13 +262,15 @@ fn main() {
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
                 if !peer.acl() {
                     println!("Peer ID: {} is not known to us!", peer.id);
-                    sock.send_to(&[MSTNAK, &rx_buff[4..8]].concat(), src).unwrap();
+                    sock.send_to(&[MSTNAK, &rx_buff[4..8]].concat(), src)
+                        .unwrap();
                     continue;
                 }
                 println!("Peer: {} has logged in", peer.id);
 
                 if logins.insert(peer.id) {
-                    sock.send_to(&[RPTACK, &rx_buff[4..8]].concat(), src).unwrap();
+                    sock.send_to(&[RPTACK, &rx_buff[4..8]].concat(), src)
+                        .unwrap();
                 }
             }
             RPTC => {
@@ -291,7 +296,8 @@ fn main() {
 
                 mash.insert(peer.id, peer);
 
-                sock.send_to(RPTACK, src).unwrap();
+                sock.send_to(&[RPTACK, &rx_buff[4..8]].concat(), src)
+                    .unwrap();
             }
             RPTP => {
                 let mut peer = Peer::new();
@@ -311,7 +317,8 @@ fn main() {
                 };
 
                 println!("Sending Pong");
-                sock.send_to(&[MSTPONG, &rx_buff[4..8]].concat(), peer.ip).unwrap();
+                sock.send_to(&[MSTPONG, &rx_buff[4..8]].concat(), peer.ip)
+                    .unwrap();
             }
             RPTA => {
                 println!("Todo!10");
