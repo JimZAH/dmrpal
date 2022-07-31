@@ -3,7 +3,7 @@ use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::{str, string, time::SystemTime};
 
 mod db;
-mod hb;
+//mod hb;
 
 const SL_OFFSET: usize = 15;
 const DMRA: &[u8] = b"DMRA";
@@ -132,6 +132,7 @@ fn main() {
     let mut dvec: Vec<[u8; 55]> = Vec::new();
     let mut replay_counter = 0;
     let mut d_counter = 31;
+    let mut payload_counter: usize = 0;
 
     let mut mash: HashMap<u32, Peer> = HashMap::new();
     let mut logins: HashSet<u32> = HashSet::new();
@@ -146,6 +147,8 @@ fn main() {
                 std::process::exit(-1);
             }
         };
+
+        payload_counter += 1;
 
         // If we have a message play it back
         if !dvec.is_empty() && replay_counter > 1 {
@@ -199,8 +202,8 @@ fn main() {
                 if d_counter > 32 {
                     d_counter = 0;
                     println!(
-                        "DEBUG: rf_src: {}, dest: {}, packet seq: {:x?} slot: {}, ctype: {}",
-                        rfs, did, packet_seq, slot, c_type
+                        "DEBUG: rf_src: {}, dest: {}, packet seq: {:x?} slot: {}, ctype: {}, payload count: {}",
+                        rfs, did, packet_seq, slot, c_type, payload_counter
                     );
                 }
                 let tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
@@ -337,6 +340,7 @@ fn main() {
                 // This needs to be adjusted soon as it will panic if the first 4 bytes are not UTF-8
                 let u_packet = std::str::from_utf8(&rx_buff[..4]).unwrap();
                 println!("Unknown packet? {}", u_packet);
+                payload_counter -= 1;
             }
         }
     }
