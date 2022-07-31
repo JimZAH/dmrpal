@@ -133,11 +133,24 @@ fn main() {
     let mut replay_counter = 0;
     let mut d_counter = 31;
     let mut payload_counter: usize = 0;
+    let mut stats_timer = SystemTime::now();
 
     let mut mash: HashMap<u32, Peer> = HashMap::new();
     let mut logins: HashSet<u32> = HashSet::new();
 
     loop {
+
+        // Print stats at least every 1 minute
+        match stats_timer.elapsed(){
+            Ok(t) => {
+                if t.as_secs() >= 60 {
+                    println!("Number of logins: {}", logins.len());
+                    stats_timer = SystemTime::now();
+                }
+            },
+            Err(_) => {}
+        }
+
         clock(&mut logins, &mut mash);
         let mut rx_buff = [0; 500];
         let (_, src) = match sock.recv_from(&mut rx_buff) {
