@@ -150,6 +150,7 @@ fn main() {
                 match p.last_check.elapsed(){
                 Ok(lc) => {
                     if lc.as_secs() > 15 {
+                        logins.remove(&p.id);
                         false
                     } else {
                         true
