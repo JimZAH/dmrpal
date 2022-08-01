@@ -155,7 +155,10 @@ fn main() {
                         true
                     }
                 },
-                Err(e) => eprintln!("Error parsing last check time: {}", e)
+                Err(e) => {
+                    eprintln!("Error parsing last check time: {}", e);
+                    false
+                }
                 });
                 }
             },
