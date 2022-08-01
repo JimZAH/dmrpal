@@ -75,7 +75,7 @@ impl Peer {
 
     // Check if the peer is allowed to sign in.
     fn acl(&self) -> bool {
-        let known_peers = vec![235165, 234053702, 2340537, 2351671, 234053703];
+        let known_peers = vec![235165, 234053702, 2340537, 2351671, 234053703, 234890901];
         for k in known_peers {
             if self.id.eq(&k) {
                 return true;
