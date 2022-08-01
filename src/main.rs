@@ -146,18 +146,17 @@ fn main() {
                 if t.as_secs() >= 60 {
                     println!("Number of logins: {}", logins.len());
                     stats_timer = SystemTime::now();
-                    for (_, m) in &mut mash{
-                        match m.last_check.elapsed(){
-                            Ok(lc) => {
-                                // Check if we need to drop peer
-                                if lc.as_secs() > 30 {
-                                    logins.remove(&m.id);
-                                }
-                            },
-                            Err(_) => {}
-                        }
+                    mash.retain(|&k, p| //logins.contains(&k)
+                match p.last_check.elapsed(){
+                Ok(lc) => {
+                    if lc.as_secs() > 15 {
+                        false
+                    } else {
+                        true
                     }
-                    mash.retain(|&k, _| logins.contains(&k));
+                },
+                Err(e) => eprintln!("Error parsing last check time: {}", e)
+                });
                 }
             },
             Err(_) => {}
