@@ -75,7 +75,7 @@ impl Peer {
 
     // Check if the peer is allowed to sign in.
     fn acl(&self) -> bool {
-        let known_peers = vec![235165, 234053702, 2340537, 2351671, 234053703, 234890901];
+        let known_peers = vec![235165, 234053702, 2340537, 2351671, 234053703, 234890901, 2352285, 2350454];
         for k in known_peers {
             if self.id.eq(&k) {
                 return true;
@@ -121,7 +121,7 @@ fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let sock = match UdpSocket::bind("0.0.0.0:5557") {
+    let sock = match UdpSocket::bind("0.0.0.0:55555") {
         Ok(s) => s,
         Err(e) => {
             eprintln!("There was an error binding: {}", e);
