@@ -140,12 +140,24 @@ fn main() {
 
     loop {
 
-        // Print stats at least every 1 minute
+        // Print stats at least every 1 minute and check if a peer needs removing
         match stats_timer.elapsed(){
             Ok(t) => {
                 if t.as_secs() >= 60 {
                     println!("Number of logins: {}", logins.len());
                     stats_timer = SystemTime::now();
+                    for (_, m) in &mut mash{
+                        match m.last_check.elapsed(){
+                            Ok(lc) => {
+                                // Check if we need to drop peer
+                                if lc.as_secs() > 30 {
+                                    logins.remove(&m.id);
+                                }
+                            },
+                            Err(_) => {}
+                        }
+                    }
+                    mash.retain(|&k, _| logins.contains(&k));
                 }
             },
             Err(_) => {}
