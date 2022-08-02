@@ -1,204 +1,58 @@
-const SL_OFFSET: usize = 15;
-const DMRA: &[u8] = b"DMRA";
-const DMRD: &[u8] = b"DMRD";
-const MSTCL: &[u8] = b"MSTCL";
-const MSTACK: &[u8] = b"MSTACK";
-const MSTNAK: &[u8] = b"MSTNAK";
-const MSTPONG: &[u8] = b"MSTPONG";
-const MSTN: &[u8] = b"MSTN";
-const MSTP: &[u8] = b"MSTP";
-const MSTC: &[u8] = b"MSTC";
-const RPTL: &[u8] = b"RPTL";
-const RPTPING: &[u8] = b"RPTPING";
-const RPTCL: &[u8] = b"RPTCL";
-const RPTACK: &[u8] = b"RPTACK";
-const RPTK: &[u8] = b"RPTK";
-const RPTC: &[u8] = b"RPTC";
-const RPTP: &[u8] = b"RPTP";
-const RPTA: &[u8] = b"RPTA";
-const RPTO: &[u8] = b"RPTO";
-const RPTS: &[u8] = b"RPTS";
-const RPTSBKN: &[u8] = b"RPTSBKN";
+// DMRD paclet structure
+pub struct DMRDPacket {
+    seq: u8,
+    src: u32,
+    dst: u32,
+    rpt: u32,
+    sl: u8,
+    ct: u8,
+    ft: u8,
+    dt: u8,
+    vs: u8,
+    si: u32,
+    dd: [u8; 33],
+}
 
-pub fn packet_handle(rx_buff: [u8; 55]){
-    match &rx_buff[..4] {
-        DMRA => {
-            println!("Todo! 1");
-        }
-        DMRD => {
-            d_counter += 1;
-            replay_counter = 0;
-            let _packet_data = &rx_buff[..53];
-            let rf_src = &rx_buff[5..8];
-            let dst_tg = &rx_buff[8..11];
-            let packet_seq = &rx_buff[4];
+impl DMRDPacket {
+    // Parse DMRD packet
+    pub fn parse(buf: [u8; 500]) -> Self {
+        let mut c_type = 0;
+        let mut f_type = 0;
+        let mut slot = 1;
 
-            // Get ID and destination
-            let rfs =
-                ((rf_src[0] as u32) << 16) | ((rf_src[1] as u32) << 8) | (rf_src[2] as u32);
-            let did =
-                ((dst_tg[0] as u32) << 16) | ((dst_tg[1] as u32) << 8) | (dst_tg[2] as u32);
+        if buf[15] & 0x80 == 0x80 {
+            slot = 2;
+        }
 
-            let t_bits = rx_buff[SL_OFFSET];
-            let mut slot = 0;
+        if buf[15] & 0x40 == 0x40 {
+            c_type = 1;
+        } else if (buf[15] & 0x23) == 0x23 {
+            f_type = 1;
+        } else {
+            c_type = 0;
+        }
 
-            let mut c_type = "";
+        let mut dmrd = [0; 33];
+        dmrd.clone_from_slice(&buf[20..54]);
 
-            if t_bits & 0x80 == 0x80 {
-                slot = 2;
-            } else {
-                slot = 1;
-            }
-
-            if t_bits & 0x40 == 0x40 {
-                c_type = "unit";
-            } else if (t_bits & 0x23) == 0x23 {
-                c_type = "vcsbk";
-            } else {
-                c_type = "group";
-            }
-
-            if d_counter > 32 {
-                d_counter = 0;
-                println!(
-                    "DEBUG: rf_src: {}, dest: {}, packet seq: {:x?} slot: {}, ctype: {}",
-                    rfs, did, packet_seq, slot, c_type
-                );
-            }
-            let tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
-            // Repeat to peers who are members of the same talkgroup
-            for (_, p) in &mash {
-                if p.ip != src
-                    && p.ip
-                        != std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0)
-                {
-                    for t in &p.talk_groups {
-                        if t == &did {
-                            sock.send_to(&tx_buff, p.ip).unwrap();
-                        }
-                    }
-                }
-            }
-
-            if did == 9 && slot == 2 {
-                dvec.push(tx_buff);
-            }
-        }
-        MSTCL => {
-            println!("Todo!2");
-        }
-        MSTNAK => {
-            println!("Todo!3");
-        }
-        MSTPONG => {
-            println!("Todo!4");
-        }
-        MSTN => {
-            println!("Todo!4a");
-        }
-        MSTP => {
-            println!("Todo!5");
-        }
-        MSTC => {
-            println!("Todo!6");
-        }
-        RPTL => {
-            let mut peer = Peer::new();
-            peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
-            let randid = [0x0A, 0x7E, 0xD4, 0x98];
-            println!("Sending Ack: {}", src);
-            println!("Repeater Login Request: {:x?}", rx_buff);
-            sock.send_to(&[RPTACK, &rx_buff[4..8], &randid].concat(), src)
-                .unwrap();
-        }
-        RPTPING => {
-            println!("Todo!6");
-        }
-        RPTCL => {
-            println!("Todo!7");
-        }
-        RPTACK => {
-            println!("Todo!8");
-        }
-        RPTK => {
-            let mut peer = Peer::new();
-            peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
-            if !peer.acl() {
-                println!("Peer ID: {} is not known to us!", peer.id);
-                sock.send_to(&[MSTNAK, &rx_buff[4..8]].concat(), src)
-                    .unwrap();
-                continue;
-            }
-            println!("Peer: {} has logged in", peer.id);
-
-            if logins.insert(peer.id) {
-                sock.send_to(&[RPTACK, &rx_buff[4..8]].concat(), src)
-                    .unwrap();
-            }
-        }
-        RPTC => {
-            let mut peer = Peer::new();
-            peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
-            peer.ip = src;
-
-            if !logins.contains(&peer.id) {
-                println!("Unknown peer sent info {}", peer.id);
-                continue;
-            }
-
-            peer.Callsign = match str::from_utf8(&rx_buff[8..16]) {
-                Ok(c) => c.to_owned(),
-                Err(_) => "Unknown".to_owned(),
-            };
-            peer.Frequency = match str::from_utf8(&rx_buff[16..38]) {
-                Ok(c) => c.to_owned(),
-                Err(_) => "Unknown".to_owned(),
-            };
-            println!("Callsign is: {}", peer.Callsign);
-            println!("Frequency is: {}", peer.Frequency);
-
-            mash.insert(peer.id, peer);
-
-            sock.send_to(&[RPTACK, &rx_buff[4..8]].concat(), src)
-                .unwrap();
-        }
-        RPTP => {
-            let mut peer = Peer::new();
-            peer.pid(&<[u8; 4]>::try_from(&rx_buff[7..11]).unwrap());
-
-            // Only send pong if we know about the peer.
-            // Also update the peer IP address if it has changed.
-            peer.ip = match mash.get_mut(&peer.id) {
-                Some(p) => {
-                    p.last_check = SystemTime::now();
-                    if p.ip != src {
-                        p.ip = src;
-                    }
-                    p.ip
-                }
-                None => continue,
-            };
-
-            println!("Sending Pong");
-            sock.send_to(&[MSTPONG, &rx_buff[4..8]].concat(), peer.ip)
-                .unwrap();
-        }
-        RPTA => {
-            println!("Todo!10");
-        }
-        RPTO => {
-            println!("Todo!11");
-        }
-        RPTS => {
-            println!("Todo!12");
-        }
-        RPTSBKN => {
-            println!("Todo!13");
-        }
-        _ => {
-            // This needs to be adjusted soon as it will panic if the first 4 bytes are not UTF-8
-            let u_packet = std::str::from_utf8(&rx_buff[..4]).unwrap();
-            println!("Unknown packet? {}", u_packet);
+        Self {
+            seq: buf[4],
+            src: ((buf[5] as u32) << 16) | ((buf[6] as u32) << 8) | (buf[7] as u32),
+            dst: ((buf[8] as u32) << 16) | ((buf[9] as u32) << 8) | (buf[10] as u32),
+            rpt: ((buf[11] as u32) << 24)
+                | ((buf[12] as u32) << 16)
+                | ((buf[13] as u32) << 8)
+                | (buf[14] as u32),
+            sl: slot,
+            ct: c_type,
+            ft: f_type,
+            dt: 0,
+            vs: 0,
+            si: ((buf[16] as u32) << 24)
+                | ((buf[17] as u32) << 16)
+                | ((buf[18] as u32) << 8)
+                | (buf[19] as u32),
+            dd: dmrd,
         }
     }
 }
