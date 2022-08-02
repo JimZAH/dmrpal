@@ -202,7 +202,6 @@ fn main() {
                 let dst_tg = &rx_buff[8..11];
                 let packet_seq = &rx_buff[4];
 
-
                 if d_counter > 32 {
                     d_counter = 0;
                     println!(

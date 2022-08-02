@@ -33,7 +33,7 @@ impl DMRDPacket {
         }
 
         let mut dmrd = [0; 33];
-        dmrd.clone_from_slice(&buf[20..54]);
+        dmrd.clone_from_slice(&buf[20..53]);
 
         Self {
             seq: buf[4],
