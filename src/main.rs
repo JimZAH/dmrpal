@@ -3,7 +3,7 @@ use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::{io, str, string, time::SystemTime};
 
 mod db;
-//mod hb;
+mod hb;
 
 const SL_OFFSET: usize = 15;
 const DMRA: &[u8] = b"DMRA";
@@ -194,6 +194,7 @@ fn main() {
                 println!("Todo! 1");
             }
             DMRD => {
+                let hbp = hb::DMRDPacket::parse(rx_buff);
                 d_counter += 1;
                 replay_counter = 0;
                 let _packet_data = &rx_buff[..53];
@@ -201,36 +202,12 @@ fn main() {
                 let dst_tg = &rx_buff[8..11];
                 let packet_seq = &rx_buff[4];
 
-                // Get ID and destination
-                let rfs =
-                    ((rf_src[0] as u32) << 16) | ((rf_src[1] as u32) << 8) | (rf_src[2] as u32);
-                let did =
-                    ((dst_tg[0] as u32) << 16) | ((dst_tg[1] as u32) << 8) | (dst_tg[2] as u32);
-
-                let t_bits = rx_buff[SL_OFFSET];
-                let mut slot = 0;
-
-                let mut c_type = "";
-
-                if t_bits & 0x80 == 0x80 {
-                    slot = 2;
-                } else {
-                    slot = 1;
-                }
-
-                if t_bits & 0x40 == 0x40 {
-                    c_type = "unit";
-                } else if (t_bits & 0x23) == 0x23 {
-                    c_type = "vcsbk";
-                } else {
-                    c_type = "group";
-                }
 
                 if d_counter > 32 {
                     d_counter = 0;
                     println!(
                         "DEBUG: rf_src: {}, dest: {}, packet seq: {:x?} slot: {}, ctype: {}, payload count: {}",
-                        rfs, did, packet_seq, slot, c_type, payload_counter
+                        hbp.src, hbp.dst, hbp.seq, hbp.sl, hbp.ct, payload_counter
                     );
                 }
                 let tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
@@ -241,14 +218,14 @@ fn main() {
                             != std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0)
                     {
                         for t in &p.talk_groups {
-                            if t == &did {
+                            if t == &hbp.dst {
                                 sock.send_to(&tx_buff, p.ip).unwrap();
                             }
                         }
                     }
                 }
 
-                if did == 9 && slot == 2 {
+                if hbp.dst == 9 && hbp.sl == 2 {
                     dvec.push(tx_buff);
                 }
             }
