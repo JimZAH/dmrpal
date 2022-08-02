@@ -193,12 +193,11 @@ fn main() {
             dvec.clear();
         }
 
-        if !dvec.is_empty() {
-            replay_counter += 1;
-        }
-
         if rxs > 4 {
             payload_counter += 1;
+            if !dvec.is_empty() {
+                replay_counter += 1;
+            }
             match &rx_buff[..4] {
                 DMRA => {
                     println!("Todo! 1");
