@@ -205,8 +205,8 @@ fn main() {
                 if d_counter > 32 {
                     d_counter = 0;
                     println!(
-                        "DEBUG: rf_src: {}, dest: {}, packet seq: {:x?} slot: {}, ctype: {}, payload count: {}",
-                        hbp.src, hbp.dst, hbp.seq, hbp.sl, hbp.ct, payload_counter
+                        "DEBUG: rf_src: {}, dest: {}, packet seq: {:x?} slot: {}, ctype: {}, stream id: {} payload count: {}",
+                        hbp.src, hbp.dst, hbp.seq, hbp.sl, hbp.ct, hbp.si, payload_counter
                     );
                 }
                 let tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
