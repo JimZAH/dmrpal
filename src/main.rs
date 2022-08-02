@@ -75,15 +75,13 @@ impl Peer {
 
     // Check if the peer is allowed to sign in.
     fn acl(&self) -> bool {
-        let known_peers = vec![
-            235165, 234053702, 2340537, 2351671, 234053703, 234890901, 2352285, 2350454,
-        ];
+        let known_peers = vec![000000];
         for k in known_peers {
             if self.id.eq(&k) {
-                return true;
+                return false;
             }
         }
-        false
+        true
     }
 
     // Set the peer ID
@@ -294,7 +292,7 @@ fn main() {
                 let mut peer = Peer::new();
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
                 if !peer.acl() {
-                    println!("Peer ID: {} is not known to us!", peer.id);
+                    println!("Peer ID: {} is blocked", peer.id);
                     sock.send_to(&[MSTNAK, &rx_buff[4..8]].concat(), src)
                         .unwrap();
                     continue;
