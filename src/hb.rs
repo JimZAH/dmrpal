@@ -1,16 +1,16 @@
 // DMRD paclet structure
 pub struct DMRDPacket {
-    seq: u8,
-    src: u32,
-    dst: u32,
-    rpt: u32,
-    sl: u8,
-    ct: u8,
-    ft: u8,
-    dt: u8,
-    vs: u8,
-    si: u32,
-    dd: [u8; 33],
+    pub seq: u8,
+    pub src: u32,
+    pub dst: u32,
+    pub rpt: u32,
+    pub sl: u8,
+    pub ct: u8,
+    pub ft: u8,
+    pub dt: u8,
+    pub vs: u8,
+    pub si: u32,
+    pub dd: [u8; 33],
 }
 
 impl DMRDPacket {
