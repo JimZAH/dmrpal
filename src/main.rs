@@ -185,8 +185,6 @@ fn main() {
             }
         };
 
-        payload_counter += 1;
-
         // If we have a message play it back
         if !dvec.is_empty() && replay_counter > 1 {
             replay_counter = 0;
@@ -200,6 +198,7 @@ fn main() {
         }
 
         if rxs > 4 {
+            payload_counter += 1;
             match &rx_buff[..4] {
                 DMRA => {
                     println!("Todo! 1");
