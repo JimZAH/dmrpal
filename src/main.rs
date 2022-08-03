@@ -46,7 +46,7 @@ struct Peer {
     Power: u16,
     Height: u16,
     ip: std::net::SocketAddr,
-    talk_groups: Vec<u16>,
+    talk_groups: Vec<u32>,
 }
 
 impl Serverstate {
@@ -211,7 +211,7 @@ fn main() {
                 }
                 //let tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
                 let tx_buff = hbp.construct();
-
+                
                 // Repeat to peers who are members of the same talkgroup
                 for (_, p) in &mash {
                     if p.ip != src
