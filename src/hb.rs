@@ -1,8 +1,8 @@
 // DMRD paclet structure
 pub struct DMRDPacket {
     pub seq: u8,
-    pub src: u32,
-    pub dst: u32,
+    pub src: u16,
+    pub dst: u16,
     pub rpt: u32,
     pub sl: u8,
     pub ct: u8,
@@ -73,8 +73,8 @@ impl DMRDPacket {
 
         Self {
             seq: buf[4],
-            src: ((buf[5] as u32) << 16) | ((buf[6] as u32) << 8) | (buf[7] as u32),
-            dst: ((buf[8] as u32) << 16) | ((buf[9] as u32) << 8) | (buf[10] as u32),
+            src: ((buf[5] as u16) << 12) | ((buf[6] as u16) << 8) | (buf[7] as u16),
+            dst: ((buf[8] as u16) << 12) | ((buf[9] as u16) << 8) | (buf[10] as u16),
             rpt: ((buf[11] as u32) << 24)
                 | ((buf[12] as u32) << 16)
                 | ((buf[13] as u32) << 8)

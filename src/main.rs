@@ -46,7 +46,7 @@ struct Peer {
     Power: u16,
     Height: u16,
     ip: std::net::SocketAddr,
-    talk_groups: Vec<u32>,
+    talk_groups: Vec<u16>,
 }
 
 impl Serverstate {
