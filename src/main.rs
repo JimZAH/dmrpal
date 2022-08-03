@@ -209,7 +209,9 @@ fn main() {
                         hbp.src, hbp.dst, hbp.seq, hbp.sl, hbp.ct, hbp.si, payload_counter
                     );
                 }
-                let tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
+                //let tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
+                let tx_buff = hbp.construct();
+                
                 // Repeat to peers who are members of the same talkgroup
                 for (_, p) in &mash {
                     if p.ip != src
