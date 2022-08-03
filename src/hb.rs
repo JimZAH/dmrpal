@@ -1,8 +1,8 @@
 // DMRD paclet structure
 pub struct DMRDPacket {
     pub seq: u8,
-    pub src: u16,
-    pub dst: u16,
+    pub src: u32,
+    pub dst: u32,
     pub rpt: u32,
     pub sl: u8,
     pub ct: u8,
@@ -24,8 +24,19 @@ impl DMRDPacket {
 
         cbuf[4] = self.seq;
 
-        cbuf[5..8].copy_from_slice(&self.src.to_be_bytes());
-        cbuf[8..11].copy_from_slice(&self.dst.to_be_bytes());
+        /*
+        Rust doesn't have a 24bit type in the standard library
+        There is a crate that adds this custom type, but I don't
+        see a need to add a crate when we can just shift the
+        numbers manually.
+        */
+        cbuf[5] = (self.src >> 16) as u8;
+        cbuf[6] = (self.src >> 8) as u8;
+        cbuf[7] = (self.src >> 0) as u8;
+        cbuf[8] = (self.dst >> 16) as u8;
+        cbuf[9] = (self.dst >> 8) as u8;
+        cbuf[10] = (self.dst >> 0) as u8;
+
         cbuf[11..15].copy_from_slice(&self.rpt.to_be_bytes());
 
         if self.sl == 2 {
@@ -73,8 +84,8 @@ impl DMRDPacket {
 
         Self {
             seq: buf[4],
-            src: ((buf[5] as u16) << 12) | ((buf[6] as u16) << 8) | (buf[7] as u16),
-            dst: ((buf[8] as u16) << 12) | ((buf[9] as u16) << 8) | (buf[10] as u16),
+            src: ((buf[5] as u32) << 16) | ((buf[6] as u32) << 8) | (buf[7] as u32),
+            dst: ((buf[8] as u32) << 16) | ((buf[9] as u32) << 8) | (buf[10] as u32),
             rpt: ((buf[11] as u32) << 24)
                 | ((buf[12] as u32) << 16)
                 | ((buf[13] as u32) << 8)
