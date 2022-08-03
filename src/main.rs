@@ -195,7 +195,6 @@ fn main() {
             }
             DMRD => {
                 let hbp = hb::DMRDPacket::parse(rx_buff);
-                println!("{:x?}", rx_buff);
                 d_counter += 1;
                 replay_counter = 0;
                 let _packet_data = &rx_buff[..53];
@@ -210,12 +209,9 @@ fn main() {
                         hbp.src, hbp.dst, hbp.seq, hbp.sl, hbp.ct, hbp.si, payload_counter
                     );
                 }
-                //let tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
-                let tx_buff = hbp.construct();
-                println!();
-                println!("{:x?}", tx_buff);
-                println!();
-                println!("{:x?}", hbp.dd);
+                let tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
+                //let tx_buff = hbp.construct();
+
                 // Repeat to peers who are members of the same talkgroup
                 for (_, p) in &mash {
                     if p.ip != src
