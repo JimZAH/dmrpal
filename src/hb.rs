@@ -8,12 +8,12 @@ pub struct DMRDPacket {
     pub ct: u8,
     pub ft: u8,
     pub dt: u8,
-    pub vs: u8,
     pub si: u32,
     pub dd: [u8; 33],
 }
 
 impl DMRDPacket {
+    // TODO: Data type 4 bits
     pub fn construct(&self) -> [u8; 55] {
         let mut cbuf = [0; 55];
 
@@ -23,15 +23,34 @@ impl DMRDPacket {
         cbuf[3] = 'D' as u8;
 
         cbuf[4] = self.seq;
-        
+
         cbuf[5..8].copy_from_slice(&self.src.to_be_bytes());
         cbuf[8..11].copy_from_slice(&self.dst.to_be_bytes());
         cbuf[11..15].copy_from_slice(&self.rpt.to_be_bytes());
 
+        if self.sl == 2 {
+            cbuf[15] = 1 << 0;
+        }
+
+        if self.ct == 1 {
+            cbuf[15] |= 1 << 1;
+        }
+
+        if self.ft == 1 {
+            cbuf[15] |= 1 << 2;
+        } else if self.ft == 2 {
+            cbuf[15] |= 1 << 3;
+        } else if self.ft == 3 {
+            cbuf[15] |= 3 << 2;
+        }
+
+        cbuf[16..20].copy_from_slice(&self.si.to_be_bytes());
+        cbuf[20..53].copy_from_slice(&self.dd);
         cbuf
     }
 
     // Parse DMRD packet
+    // TODO: Data type 4 bits
     pub fn parse(buf: [u8; 500]) -> Self {
         let mut c_type = 0;
         let mut f_type = 0;
@@ -64,7 +83,6 @@ impl DMRDPacket {
             ct: c_type,
             ft: f_type,
             dt: 0,
-            vs: 0,
             si: ((buf[16] as u32) << 24)
                 | ((buf[17] as u32) << 16)
                 | ((buf[18] as u32) << 8)
