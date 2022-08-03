@@ -214,6 +214,8 @@ fn main() {
                 let tx_buff = hbp.construct();
                 println!();
                 println!("{:x?}", tx_buff);
+                println!();
+                println!("{:x?}", hbp.dd);
                 // Repeat to peers who are members of the same talkgroup
                 for (_, p) in &mash {
                     if p.ip != src
