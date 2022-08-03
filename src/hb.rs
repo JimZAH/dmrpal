@@ -14,6 +14,23 @@ pub struct DMRDPacket {
 }
 
 impl DMRDPacket {
+    pub fn construct(&self) -> [u8; 55] {
+        let mut cbuf = [0; 55];
+
+        cbuf[0] = 'D' as u8;
+        cbuf[1] = 'M' as u8;
+        cbuf[2] = 'R' as u8;
+        cbuf[3] = 'D' as u8;
+
+        cbuf[4] = self.seq;
+        
+        cbuf[5..8].copy_from_slice(&self.src.to_be_bytes());
+        cbuf[8..11].copy_from_slice(&self.dst.to_be_bytes());
+        cbuf[11..15].copy_from_slice(&self.rpt.to_be_bytes());
+
+        cbuf
+    }
+
     // Parse DMRD packet
     pub fn parse(buf: [u8; 500]) -> Self {
         let mut c_type = 0;
