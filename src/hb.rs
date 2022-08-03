@@ -9,7 +9,7 @@ pub struct DMRDPacket {
     pub ft: u8,
     pub dt: u8,
     pub si: u32,
-    pub dd: [u8; 33],
+    pub dd: [u8; 35],
 }
 
 impl DMRDPacket {
@@ -56,7 +56,7 @@ impl DMRDPacket {
         }
 
         cbuf[16..20].copy_from_slice(&self.si.to_be_bytes());
-        cbuf[20..53].copy_from_slice(&self.dd);
+        cbuf[20..55].copy_from_slice(&self.dd);
         cbuf
     }
 
@@ -79,8 +79,8 @@ impl DMRDPacket {
             c_type = 0;
         }
 
-        let mut dmrd = [0; 33];
-        dmrd.clone_from_slice(&buf[20..53]);
+        let mut dmrd = [0; 35];
+        dmrd.clone_from_slice(&buf[20..55]);
 
         Self {
             seq: buf[4],
