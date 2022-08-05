@@ -69,7 +69,7 @@ impl Peer {
             Power: 0,
             Height: 0,
             ip: std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
-            talk_groups: vec![235, 9, 840],
+            talk_groups: vec![235, 9, 840, 31337],
         }
     }
 
