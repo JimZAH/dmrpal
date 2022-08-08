@@ -342,9 +342,10 @@ fn main() {
                 println!("Todo!13");
             }
             _ => {
-                // This needs to be adjusted soon as it will panic if the first 4 bytes are not UTF-8
-                let u_packet = std::str::from_utf8(&rx_buff[..4]).unwrap();
-                println!("Unknown packet? {}", u_packet);
+                match std::str::from_utf8(&rx_buff[..4]) {
+                    Ok(s) => println!("Unknown packet? {}", s),
+                    Err(_) => eprintln!("Unknown packet header"),
+                }
                 payload_counter -= 1;
             }
         }
