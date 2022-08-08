@@ -1,8 +1,9 @@
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
-use std::{str, string, time::SystemTime};
+use std::{io, str, string, time::SystemTime};
 
 mod db;
+mod hb;
 
 const SL_OFFSET: usize = 15;
 const DMRA: &[u8] = b"DMRA";
@@ -68,19 +69,19 @@ impl Peer {
             Power: 0,
             Height: 0,
             ip: std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
-            talk_groups: vec![235, 9, 840],
+            talk_groups: vec![235, 9, 840, 31337],
         }
     }
 
     // Check if the peer is allowed to sign in.
     fn acl(&self) -> bool {
-        let known_peers = vec![235165, 234053702, 2340537, 2351671, 234053703];
+        let known_peers = vec![000000];
         for k in known_peers {
             if self.id.eq(&k) {
-                return true;
+                return false;
             }
         }
-        false
+        true
     }
 
     // Set the peer ID
@@ -120,7 +121,7 @@ fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let sock = match UdpSocket::bind("0.0.0.0:5557") {
+    let sock = match UdpSocket::bind("0.0.0.0:55555") {
         Ok(s) => s,
         Err(e) => {
             eprintln!("There was an error binding: {}", e);
@@ -131,17 +132,47 @@ fn main() {
     let mut dvec: Vec<[u8; 55]> = Vec::new();
     let mut replay_counter = 0;
     let mut d_counter = 31;
+    let mut payload_counter: usize = 0;
+    let mut stats_timer = SystemTime::now();
 
     let mut mash: HashMap<u32, Peer> = HashMap::new();
     let mut logins: HashSet<u32> = HashSet::new();
 
     loop {
+        // Print stats at least every 1 minute and check if a peer needs removing
+        match stats_timer.elapsed() {
+            Ok(t) => {
+                if t.as_secs() >= 60 {
+                    println!("Number of logins: {}", logins.len());
+                    stats_timer = SystemTime::now();
+                    mash.retain(|&k, p| //logins.contains(&k)
+                match p.last_check.elapsed(){
+                Ok(lc) => {
+                    if lc.as_secs() > 15 {
+                        logins.remove(&p.id);
+                        false
+                    } else {
+                        true
+                    }
+                },
+                Err(e) => {
+                    eprintln!("Error parsing last check time: {}", e);
+                    false
+                }
+                });
+                }
+            }
+            Err(_) => {}
+        }
+
         clock(&mut logins, &mut mash);
         let mut rx_buff = [0; 500];
-        let (_, src) = match sock.recv_from(&mut rx_buff) {
+
+        let (rxs, src) = match sock.recv_from(&mut rx_buff) {
             Ok(rs) => (rs),
+
             Err(e) => {
-                eprintln!("There was an error binding: {}", e);
+                eprintln!("There was an error listening: {}", e);
                 std::process::exit(-1);
             }
         };
@@ -154,15 +185,16 @@ fn main() {
             dvec.clear();
         }
 
+        payload_counter += 1;
         if !dvec.is_empty() {
             replay_counter += 1;
         }
-
         match &rx_buff[..4] {
             DMRA => {
                 println!("Todo! 1");
             }
             DMRD => {
+                let hbp = hb::DMRDPacket::parse(rx_buff);
                 d_counter += 1;
                 replay_counter = 0;
                 let _packet_data = &rx_buff[..53];
@@ -170,39 +202,16 @@ fn main() {
                 let dst_tg = &rx_buff[8..11];
                 let packet_seq = &rx_buff[4];
 
-                // Get ID and destination
-                let rfs =
-                    ((rf_src[0] as u32) << 16) | ((rf_src[1] as u32) << 8) | (rf_src[2] as u32);
-                let did =
-                    ((dst_tg[0] as u32) << 16) | ((dst_tg[1] as u32) << 8) | (dst_tg[2] as u32);
-
-                let t_bits = rx_buff[SL_OFFSET];
-                let mut slot = 0;
-
-                let mut c_type = "";
-
-                if t_bits & 0x80 == 0x80 {
-                    slot = 2;
-                } else {
-                    slot = 1;
-                }
-
-                if t_bits & 0x40 == 0x40 {
-                    c_type = "unit";
-                } else if (t_bits & 0x23) == 0x23 {
-                    c_type = "vcsbk";
-                } else {
-                    c_type = "group";
-                }
-
                 if d_counter > 32 {
                     d_counter = 0;
                     println!(
-                        "DEBUG: rf_src: {}, dest: {}, packet seq: {:x?} slot: {}, ctype: {}",
-                        rfs, did, packet_seq, slot, c_type
+                        "DEBUG: rf_src: {}, dest: {}, packet seq: {:x?} slot: {}, ctype: {}, stream id: {} payload count: {}",
+                        hbp.src, hbp.dst, hbp.seq, hbp.sl, hbp.ct, hbp.si, payload_counter
                     );
                 }
                 let tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
+                //let tx_buff = hbp.construct();
+
                 // Repeat to peers who are members of the same talkgroup
                 for (_, p) in &mash {
                     if p.ip != src
@@ -210,14 +219,14 @@ fn main() {
                             != std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0)
                     {
                         for t in &p.talk_groups {
-                            if t == &did {
+                            if t == &hbp.dst {
                                 sock.send_to(&tx_buff, p.ip).unwrap();
                             }
                         }
                     }
                 }
 
-                if did == 9 && slot == 2 {
+                if hbp.dst == 9 && hbp.sl == 2 {
                     dvec.push(tx_buff);
                 }
             }
@@ -261,7 +270,7 @@ fn main() {
                 let mut peer = Peer::new();
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
                 if !peer.acl() {
-                    println!("Peer ID: {} is not known to us!", peer.id);
+                    println!("Peer ID: {} is blocked", peer.id);
                     sock.send_to(&[MSTNAK, &rx_buff[4..8]].concat(), src)
                         .unwrap();
                     continue;
@@ -333,9 +342,11 @@ fn main() {
                 println!("Todo!13");
             }
             _ => {
-                // This needs to be adjusted soon as it will panic if the first 4 bytes are not UTF-8
-                let u_packet = std::str::from_utf8(&rx_buff[..4]).unwrap();
-                println!("Unknown packet? {}", u_packet);
+                match std::str::from_utf8(&rx_buff[..4]) {
+                    Ok(s) => println!("Unknown packet? {}", s),
+                    Err(_) => eprintln!("Unknown packet header"),
+                }
+                payload_counter -= 1;
             }
         }
     }
