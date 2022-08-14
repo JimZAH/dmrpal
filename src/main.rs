@@ -46,7 +46,7 @@ struct Peer {
     Power: u16,
     Height: u16,
     ip: std::net::SocketAddr,
-    talk_groups: Vec<u32>,
+    talk_groups: HashMap<u32,u8>,
 }
 
 impl Serverstate {
@@ -69,7 +69,7 @@ impl Peer {
             Power: 0,
             Height: 0,
             ip: std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
-            talk_groups: vec![235, 9, 840, 31337],
+            talk_groups: HashMap::from([(235, 2), (9,2), (840,2), (31337,2)]),
         }
     }
 
@@ -218,11 +218,22 @@ fn main() {
                         && p.ip
                             != std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0)
                     {
-                        for t in &p.talk_groups {
-                            if t == &hbp.dst {
-                                sock.send_to(&tx_buff, p.ip).unwrap();
+                        match p.talk_groups.get(&hbp.dst){
+                            Some(tg) => {
+                                if tg == &hbp.sl {
+                                    sock.send_to(&tx_buff, p.ip).unwrap();
+                                }
+                            },
+                            None => {
+                                println!("We are unaware of this talkgroup: {}", &hbp.dst);
                             }
                         }
+                        //for t in &p.talk_groups {
+                            
+                            //if t == &hbp.dst {
+                            //sock.send_to(&tx_buff, p.ip).unwrap();
+                            //}
+                        //}
                     }
                 }
 
