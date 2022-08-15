@@ -39,7 +39,6 @@ enum Useractivate {
     Ua(u32),
 }
 
-
 struct Peer {
     id: u32,
     Callsign: String,
@@ -52,16 +51,16 @@ struct Peer {
     Power: u16,
     Height: u16,
     ip: std::net::SocketAddr,
-    talk_groups: HashMap<u32,Talkgroup>,
+    talk_groups: HashMap<u32, Talkgroup>,
 }
 
 #[derive(Debug)]
-struct Talkgroup{
+struct Talkgroup {
     expire: u64,
     id: u32,
     sl: u8,
     ua: bool,
-    time_stamp: SystemTime
+    time_stamp: SystemTime,
 }
 
 impl Serverstate {
@@ -84,7 +83,7 @@ impl Peer {
             Power: 0,
             Height: 0,
             ip: std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
-            talk_groups: HashMap::from([(0,Talkgroup::default())]),
+            talk_groups: HashMap::from([(0, Talkgroup::default())]),
         }
     }
 
@@ -122,13 +121,12 @@ impl Talkgroup {
 
     // Remove a talkgroup from a peer
     fn remove(tg: u32) -> bool {
-        
         false
     }
 
     // Set a talk group to a peer
     fn set(sl: u8, tg: Useractivate) -> Self {
-        let (ua, talk_group, exp) = match tg{
+        let (ua, talk_group, exp) = match tg {
             Useractivate::Static(u) => (false, u, 0),
             Useractivate::Ua(u) => (true, u, 900),
         };
@@ -194,8 +192,11 @@ fn main() {
             Ok(t) => {
                 if t.as_secs() >= 60 {
                     println!("Number of logins: {}", logins.len());
-                    for (t,p) in &mash{
-                        println!("Peer details\n\nID: {}\nCall: {}\nTG active {:?}", t, p.Callsign, p.talk_groups);
+                    for (t, p) in &mash {
+                        println!(
+                            "Peer details\n\nID: {}\nCall: {}\nTG active {:?}",
+                            t, p.Callsign, p.talk_groups
+                        );
                     }
                     stats_timer = SystemTime::now();
                     mash.retain(|&k, p| //logins.contains(&k)
@@ -267,21 +268,30 @@ fn main() {
 
                 // Repeat to peers who are members of the same talkgroup
                 for (_, p) in &mut mash {
-                        match p.talk_groups.get(&hbp.dst){
-                            Some(tg) => {
-                                if tg.sl == hbp.sl && p.ip != src
+                    match p.talk_groups.get(&hbp.dst) {
+                        Some(tg) => {
+                            if tg.sl == hbp.sl
+                                && p.ip != src
                                 && p.ip
-                                    != std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0){
-                                    sock.send_to(&tx_buff, p.ip).unwrap();
-                                }
-                            },
-                            None => {
-                                // This will add all peers to a talkgroup for testing. Normally we would go ahead and drop 
-                                // the packet for non-member peers. UA needs to be dealt with in a seperate function
-                                p.talk_groups.insert(hbp.dst, Talkgroup::set(hbp.sl ,Useractivate::Ua(hbp.dst)));
-                                println!("Added TG: {} to peer: id-{} call-{} ", &hbp.dst, &p.id, &p.Callsign);
+                                    != std::net::SocketAddr::new(
+                                        IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+                                        0,
+                                    )
+                            {
+                                sock.send_to(&tx_buff, p.ip).unwrap();
                             }
                         }
+                        None => {
+                            // This will add all peers to a talkgroup for testing. Normally we would go ahead and drop
+                            // the packet for non-member peers. UA needs to be dealt with in a seperate function
+                            p.talk_groups
+                                .insert(hbp.dst, Talkgroup::set(hbp.sl, Useractivate::Ua(hbp.dst)));
+                            println!(
+                                "Added TG: {} to peer: id-{} call-{} ",
+                                &hbp.dst, &p.id, &p.Callsign
+                            );
+                        }
+                    }
                 }
 
                 if hbp.dst == 9 && hbp.sl == 2 {
