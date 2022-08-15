@@ -34,6 +34,12 @@ enum Serverstate {
     Inuse,
 }
 
+enum Useractivate {
+    Static(u32),
+    Ua(u32),
+}
+
+
 struct Peer {
     id: u32,
     Callsign: String,
@@ -46,7 +52,16 @@ struct Peer {
     Power: u16,
     Height: u16,
     ip: std::net::SocketAddr,
-    talk_groups: HashMap<u32,u8>,
+    talk_groups: HashMap<u32,Talkgroup>,
+}
+
+#[derive(Debug)]
+struct Talkgroup{
+    expire: u64,
+    id: u32,
+    sl: u8,
+    ua: bool,
+    time_stamp: SystemTime
 }
 
 impl Serverstate {
@@ -69,7 +84,7 @@ impl Peer {
             Power: 0,
             Height: 0,
             ip: std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
-            talk_groups: HashMap::from([(235, 2), (9,2), (840,2), (31337,2)]),
+            talk_groups: HashMap::from([(0,Talkgroup::default())]),
         }
     }
 
@@ -90,6 +105,41 @@ impl Peer {
             | ((buff[1] as u32) << 16)
             | ((buff[2] as u32) << 8)
             | (buff[3] as u32);
+    }
+}
+
+impl Talkgroup {
+    // return a default value for talkgroup
+    fn default() -> Self {
+        Self {
+            expire: 0,
+            id: 0,
+            sl: 1,
+            ua: false,
+            time_stamp: SystemTime::now(),
+        }
+    }
+
+    // Remove a talkgroup from a peer
+    fn remove(tg: u32) -> bool {
+        
+        false
+    }
+
+    // Set a talk group to a peer
+    fn set(sl: u8, tg: Useractivate) -> Self {
+        let (ua, talk_group, exp) = match tg{
+            Useractivate::Static(u) => (false, u, 0),
+            Useractivate::Ua(u) => (true, u, 900),
+        };
+
+        Self {
+            expire: exp,
+            id: talk_group,
+            sl: sl,
+            ua: ua,
+            time_stamp: SystemTime::now(),
+        }
     }
 }
 
@@ -144,6 +194,9 @@ fn main() {
             Ok(t) => {
                 if t.as_secs() >= 60 {
                     println!("Number of logins: {}", logins.len());
+                    for (t,p) in &mash{
+                        println!("Peer details\n\nID: {}\nCall: {}\nTG active {:?}", t, p.Callsign, p.talk_groups);
+                    }
                     stats_timer = SystemTime::now();
                     mash.retain(|&k, p| //logins.contains(&k)
                 match p.last_check.elapsed(){
@@ -213,27 +266,24 @@ fn main() {
                 //let tx_buff = hbp.construct();
 
                 // Repeat to peers who are members of the same talkgroup
-                for (_, p) in &mash {
+                for (_, p) in &mut mash {
                     if p.ip != src
                         && p.ip
                             != std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0)
                     {
                         match p.talk_groups.get(&hbp.dst){
                             Some(tg) => {
-                                if tg == &hbp.sl {
+                                if tg.sl == hbp.sl {
                                     sock.send_to(&tx_buff, p.ip).unwrap();
                                 }
                             },
                             None => {
-                                println!("We are unaware of this talkgroup: {}", &hbp.dst);
+                                // This will add all peers to a talkgroup for testing. Normally we would go ahead and drop 
+                                // the packet for non-member peers. UA needs to be dealt with in a seperate function
+                                p.talk_groups.insert(hbp.dst, Talkgroup::set(hbp.sl ,Useractivate::Ua(hbp.dst)));
+                                println!("Added TG: {} to peer: id-{} call-{} ", &hbp.dst, &p.id, &p.Callsign);
                             }
                         }
-                        //for t in &p.talk_groups {
-                            
-                            //if t == &hbp.dst {
-                            //sock.send_to(&tx_buff, p.ip).unwrap();
-                            //}
-                        //}
                     }
                 }
 
