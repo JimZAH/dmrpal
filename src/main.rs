@@ -34,7 +34,7 @@ enum Serverstate {
     Inuse,
 }
 
-enum Useractivate {
+enum TgActivate {
     Static(u32),
     Ua(u32),
 }
@@ -83,7 +83,7 @@ impl Peer {
             Power: 0,
             Height: 0,
             ip: std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
-            talk_groups: HashMap::from([(0, Talkgroup::default()), (31337, Talkgroup::set(2, Useractivate::Static(31337)))]),
+            talk_groups: HashMap::from([(0, Talkgroup::default()), (31337, Talkgroup::set(2, TgActivate::Static(31337)))]),
         }
     }
 
@@ -125,10 +125,10 @@ impl Talkgroup {
     }
 
     // Set a talk group to a peer
-    fn set(sl: u8, tg: Useractivate) -> Self {
+    fn set(sl: u8, tg: TgActivate) -> Self {
         let (ua, talk_group, exp) = match tg {
-            Useractivate::Static(u) => (false, u, 0),
-            Useractivate::Ua(u) => (true, u, 900),
+            TgActivate::Static(u) => (false, u, 0),
+            TgActivate::Ua(u) => (true, u, 900),
         };
 
         Self {
@@ -285,7 +285,7 @@ fn main() {
                             // This will add all peers to a talkgroup for testing. Normally we would go ahead and drop
                             // the packet for non-member peers. UA needs to be dealt with in a seperate function
                             p.talk_groups
-                                .insert(hbp.dst, Talkgroup::set(hbp.sl, Useractivate::Ua(hbp.dst)));
+                                .insert(hbp.dst, Talkgroup::set(hbp.sl, TgActivate::Ua(hbp.dst)));
                             println!(
                                 "Added TG: {} to peer: id-{} call-{} ",
                                 &hbp.dst, &p.id, &p.Callsign
