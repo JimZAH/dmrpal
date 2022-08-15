@@ -267,13 +267,11 @@ fn main() {
 
                 // Repeat to peers who are members of the same talkgroup
                 for (_, p) in &mut mash {
-                    if p.ip != src
-                        && p.ip
-                            != std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0)
-                    {
                         match p.talk_groups.get(&hbp.dst){
                             Some(tg) => {
-                                if tg.sl == hbp.sl {
+                                if tg.sl == hbp.sl && p.ip != src
+                                && p.ip
+                                    != std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0){
                                     sock.send_to(&tx_buff, p.ip).unwrap();
                                 }
                             },
@@ -284,7 +282,6 @@ fn main() {
                                 println!("Added TG: {} to peer: id-{} call-{} ", &hbp.dst, &p.id, &p.Callsign);
                             }
                         }
-                    }
                 }
 
                 if hbp.dst == 9 && hbp.sl == 2 {
