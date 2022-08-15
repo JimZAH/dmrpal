@@ -83,7 +83,10 @@ impl Peer {
             Power: 0,
             Height: 0,
             ip: std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
-            talk_groups: HashMap::from([(0, Talkgroup::default()), (31337, Talkgroup::set(2, TgActivate::Static(31337)))]),
+            talk_groups: HashMap::from([
+                (0, Talkgroup::default()),
+                (31337, Talkgroup::set(2, TgActivate::Static(31337))),
+            ]),
         }
     }
 
