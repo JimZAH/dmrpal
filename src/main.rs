@@ -29,9 +29,11 @@ const RPTSBKN: &[u8] = b"RPTSBKN";
 
 const SOFTWARE_VERSION: u64 = 1;
 
-enum Serverstate {
-    Idle,
-    Inuse,
+#[derive(Debug)]
+enum Peertype {
+    Local,
+    Friend,
+    All
 }
 
 enum TgActivate {
@@ -52,22 +54,20 @@ struct Peer {
     Height: u16,
     ip: std::net::SocketAddr,
     talk_groups: HashMap<u32, Talkgroup>,
+    peer_type: Peertype,
 }
 
 #[derive(Debug)]
 struct Talkgroup {
     expire: u64,
     id: u32,
+    routeable: Peertype,
     sl: u8,
     ua: bool,
     time_stamp: SystemTime,
 }
 
-impl Serverstate {
-    fn start() -> Self {
-        Self::Idle
-    }
-}
+
 
 impl Peer {
     fn new() -> Self {
@@ -87,6 +87,7 @@ impl Peer {
                 (0, Talkgroup::default()),
                 (31337, Talkgroup::set(2, TgActivate::Static(31337))),
             ]),
+            peer_type: Peertype::Local,
         }
     }
 
@@ -116,6 +117,7 @@ impl Talkgroup {
         Self {
             expire: 0,
             id: 0,
+            routeable: Peertype::Local,
             sl: 1,
             ua: false,
             time_stamp: SystemTime::now(),
@@ -137,6 +139,7 @@ impl Talkgroup {
         Self {
             expire: exp,
             id: talk_group,
+            routeable: Peertype::All,
             sl: sl,
             ua: ua,
             time_stamp: SystemTime::now(),
