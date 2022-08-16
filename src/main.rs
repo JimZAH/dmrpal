@@ -265,7 +265,7 @@ fn main() {
                 //let tx_buff = hbp.construct();
 
                 // Repeat to peers who are members of the same talkgroup and peer type.
-                for (_, p) in &mut mash {
+                for p in mash.values_mut() {
                     match p.talk_groups.get_mut(&hbp.dst) {
                         Some(tg) => {
                             if tg.sl == hbp.sl
