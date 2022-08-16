@@ -269,7 +269,7 @@ fn main() {
 
                 // Repeat to peers who are members of the same talkgroup
                 for (_, p) in &mut mash {
-                    match p.talk_groups.get(&hbp.dst) {
+                    match p.talk_groups.get_mut(&hbp.dst) {
                         Some(tg) => {
                             if tg.sl == hbp.sl
                                 && p.ip != src
@@ -280,17 +280,25 @@ fn main() {
                                     )
                             {
                                 sock.send_to(&tx_buff, p.ip).unwrap();
+                            } else if tg.ua {
+                                // Reset the time stamp for the UA talkgroup
+                                tg.time_stamp = SystemTime::now();
                             }
                         }
                         None => {
-                            // This will add all peers to a talkgroup for testing. Normally we would go ahead and drop
-                            // the packet for non-member peers. UA needs to be dealt with in a seperate function
-                            p.talk_groups
-                                .insert(hbp.dst, Talkgroup::set(hbp.sl, TgActivate::Ua(hbp.dst)));
-                            println!(
-                                "Added TG: {} to peer: id-{} call-{} ",
-                                &hbp.dst, &p.id, &p.Callsign
-                            );
+                            // If no talkgroup is found for the peer then we subscribe the peer to the talkgroup requested.
+                            // If the peer does not request this talkgroup again in a 15 minute window the peer is auto-
+                            // matically unsubscribed.
+                            if p.ip == src {
+                                p.talk_groups.insert(
+                                    hbp.dst,
+                                    Talkgroup::set(hbp.sl, TgActivate::Ua(hbp.dst)),
+                                );
+                                println!(
+                                    "Added TG: {} to peer: id-{} call-{} ",
+                                    &hbp.dst, &p.id, &p.Callsign
+                                );
+                            }
                         }
                     }
                 }
