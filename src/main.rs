@@ -7,7 +7,7 @@ mod hb;
 
 const SOFTWARE_VERSION: u64 = 1;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Peertype {
     Local,
     Friend,
@@ -272,6 +272,7 @@ fn main() {
                     match p.talk_groups.get_mut(&hbp.dst) {
                         Some(tg) => {
                             if tg.sl == hbp.sl
+                                && p.peer_type == tg.routeable
                                 && p.ip != src
                                 && p.ip
                                     != std::net::SocketAddr::new(
