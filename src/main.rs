@@ -11,7 +11,7 @@ const SOFTWARE_VERSION: u64 = 1;
 enum Peertype {
     Local,
     Friend,
-    All
+    All,
 }
 
 enum TgActivate {
@@ -44,8 +44,6 @@ struct Talkgroup {
     ua: bool,
     time_stamp: SystemTime,
 }
-
-
 
 impl Peer {
     fn new() -> Self {
@@ -103,7 +101,7 @@ impl Talkgroup {
     }
 
     // Remove a talkgroup from a peer
-    fn remove(tg: u32) -> bool {
+    fn remove(&mut self, tg: u32) -> bool {
         false
     }
 
@@ -183,13 +181,32 @@ fn main() {
                         );
                     }
                     stats_timer = SystemTime::now();
-                    mash.retain(|&k, p| //logins.contains(&k)
+                    mash.retain(|_, p| //logins.contains(&k)
                 match p.last_check.elapsed(){
                 Ok(lc) => {
                     if lc.as_secs() > 15 {
                         logins.remove(&p.id);
                         false
                     } else {
+                        p.talk_groups.retain(|_, t|{
+                            if t.ua {
+                                return match t.time_stamp.elapsed(){
+                                Ok(ts) => {
+                                    if ts.as_secs() > t.expire {
+                                        println!("Removing TG: {}, From Peer: {}", t.id, p.id);
+                                        false
+                                    } else {
+                                        true
+                                    }
+                                },
+                                Err(_) => {
+                                    println!("There was an error passing time for UA, removing TG!");
+                                    false
+                                },
+                            }
+                            }
+                            true
+                    });
                         true
                     }
                 },
