@@ -5,28 +5,6 @@ use std::{io, str, string, time::SystemTime};
 mod db;
 mod hb;
 
-const SL_OFFSET: usize = 15;
-const DMRA: &[u8] = b"DMRA";
-const DMRD: &[u8] = b"DMRD";
-const MSTCL: &[u8] = b"MSTCL";
-const MSTACK: &[u8] = b"MSTACK";
-const MSTNAK: &[u8] = b"MSTNAK";
-const MSTPONG: &[u8] = b"MSTPONG";
-const MSTN: &[u8] = b"MSTN";
-const MSTP: &[u8] = b"MSTP";
-const MSTC: &[u8] = b"MSTC";
-const RPTL: &[u8] = b"RPTL";
-const RPTPING: &[u8] = b"RPTPING";
-const RPTCL: &[u8] = b"RPTCL";
-const RPTACK: &[u8] = b"RPTACK";
-const RPTK: &[u8] = b"RPTK";
-const RPTC: &[u8] = b"RPTC";
-const RPTP: &[u8] = b"RPTP";
-const RPTA: &[u8] = b"RPTA";
-const RPTO: &[u8] = b"RPTO";
-const RPTS: &[u8] = b"RPTS";
-const RPTSBKN: &[u8] = b"RPTSBKN";
-
 const SOFTWARE_VERSION: u64 = 1;
 
 #[derive(Debug)]
@@ -250,10 +228,10 @@ fn main() {
             replay_counter += 1;
         }
         match &rx_buff[..4] {
-            DMRA => {
+            hb::DMRA => {
                 println!("Todo! 1");
             }
-            DMRD => {
+            hb::DMRD => {
                 let hbp = hb::DMRDPacket::parse(rx_buff);
                 d_counter += 1;
                 replay_counter = 0;
@@ -304,59 +282,59 @@ fn main() {
                     dvec.push(tx_buff);
                 }
             }
-            MSTCL => {
+            hb::MSTCL => {
                 println!("Todo!2");
             }
-            MSTNAK => {
+            hb::MSTNAK => {
                 println!("Todo!3");
             }
-            MSTPONG => {
+            hb::MSTPONG => {
                 println!("Todo!4");
             }
-            MSTN => {
+            hb::MSTN => {
                 println!("Todo!4a");
             }
-            MSTP => {
+            hb::MSTP => {
                 println!("Todo!5");
             }
-            MSTC => {
+            hb::MSTC => {
                 println!("Todo!6");
             }
-            RPTL => {
+            hb::RPTL => {
                 let mut peer = Peer::new();
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
                 let randid = [0x0A, 0x7E, 0xD4, 0x98];
                 println!("Sending Ack: {}", src);
                 println!("Repeater Login Request: {:x?}", rx_buff);
-                sock.send_to(&[RPTACK, &rx_buff[4..8], &randid].concat(), src)
+                sock.send_to(&[hb::RPTACK, &rx_buff[4..8], &randid].concat(), src)
                     .unwrap();
             }
-            RPTPING => {
+            hb::RPTPING => {
                 println!("Todo!6");
             }
-            RPTCL => {
+            hb::RPTCL => {
                 println!("Todo!7");
             }
-            RPTACK => {
+            hb::RPTACK => {
                 println!("Todo!8");
             }
-            RPTK => {
+            hb::RPTK => {
                 let mut peer = Peer::new();
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
                 if !peer.acl() {
                     println!("Peer ID: {} is blocked", peer.id);
-                    sock.send_to(&[MSTNAK, &rx_buff[4..8]].concat(), src)
+                    sock.send_to(&[hb::MSTNAK, &rx_buff[4..8]].concat(), src)
                         .unwrap();
                     continue;
                 }
                 println!("Peer: {} has logged in", peer.id);
 
                 if logins.insert(peer.id) {
-                    sock.send_to(&[RPTACK, &rx_buff[4..8]].concat(), src)
+                    sock.send_to(&[hb::RPTACK, &rx_buff[4..8]].concat(), src)
                         .unwrap();
                 }
             }
-            RPTC => {
+            hb::RPTC => {
                 let mut peer = Peer::new();
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
                 peer.ip = src;
@@ -379,10 +357,10 @@ fn main() {
 
                 mash.insert(peer.id, peer);
 
-                sock.send_to(&[RPTACK, &rx_buff[4..8]].concat(), src)
+                sock.send_to(&[hb::RPTACK, &rx_buff[4..8]].concat(), src)
                     .unwrap();
             }
-            RPTP => {
+            hb::RPTP => {
                 let mut peer = Peer::new();
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[7..11]).unwrap());
 
@@ -400,19 +378,19 @@ fn main() {
                 };
 
                 println!("Sending Pong");
-                sock.send_to(&[MSTPONG, &rx_buff[4..8]].concat(), peer.ip)
+                sock.send_to(&[hb::MSTPONG, &rx_buff[4..8]].concat(), peer.ip)
                     .unwrap();
             }
-            RPTA => {
+            hb::RPTA => {
                 println!("Todo!10");
             }
-            RPTO => {
+            hb::RPTO => {
                 println!("Todo!11");
             }
-            RPTS => {
+            hb::RPTS => {
                 println!("Todo!12");
             }
-            RPTSBKN => {
+            hb::RPTSBKN => {
                 println!("Todo!13");
             }
             _ => {

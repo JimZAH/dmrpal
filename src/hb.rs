@@ -1,3 +1,23 @@
+pub const DMRA: &[u8] = b"DMRA";
+pub const DMRD: &[u8] = b"DMRD";
+pub const MSTCL: &[u8] = b"MSTCL";
+pub const MSTNAK: &[u8] = b"MSTNAK";
+pub const MSTPONG: &[u8] = b"MSTPONG";
+pub const MSTN: &[u8] = b"MSTN";
+pub const MSTP: &[u8] = b"MSTP";
+pub const MSTC: &[u8] = b"MSTC";
+pub const RPTL: &[u8] = b"RPTL";
+pub const RPTPING: &[u8] = b"RPTPING";
+pub const RPTCL: &[u8] = b"RPTCL";
+pub const RPTACK: &[u8] = b"RPTACK";
+pub const RPTK: &[u8] = b"RPTK";
+pub const RPTC: &[u8] = b"RPTC";
+pub const RPTP: &[u8] = b"RPTP";
+pub const RPTA: &[u8] = b"RPTA";
+pub const RPTO: &[u8] = b"RPTO";
+pub const RPTS: &[u8] = b"RPTS";
+pub const RPTSBKN: &[u8] = b"RPTSBKN";
+
 // DMRD paclet structure
 pub struct DMRDPacket {
     pub seq: u8,
