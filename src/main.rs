@@ -21,15 +21,15 @@ enum TgActivate {
 
 struct Peer {
     id: u32,
-    Callsign: String,
-    Duplex: u8,
-    Frequency: String,
-    Software: String,
-    Latitude: f32,
+    callsign: String,
+    duplex: u8,
+    frequency: String,
+    software: String,
+    latitude: f32,
     last_check: SystemTime,
-    Longitude: f32,
-    Power: u16,
-    Height: u16,
+    longitude: f32,
+    power: u16,
+    height: u16,
     ip: std::net::SocketAddr,
     talk_groups: HashMap<u32, Talkgroup>,
     peer_type: Peertype,
@@ -49,15 +49,15 @@ impl Peer {
     fn new() -> Self {
         Self {
             id: 0,
-            Callsign: string::String::default(),
-            Duplex: 0,
-            Frequency: string::String::default(),
-            Software: string::String::default(),
-            Latitude: 0.0,
+            callsign: string::String::default(),
+            duplex: 0,
+            frequency: string::String::default(),
+            software: string::String::default(),
+            latitude: 0.0,
             last_check: SystemTime::now(),
-            Longitude: 0.0,
-            Power: 0,
-            Height: 0,
+            longitude: 0.0,
+            power: 0,
+            height: 0,
             ip: std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
             talk_groups: HashMap::from([
                 (0, Talkgroup::default()),
@@ -101,7 +101,7 @@ impl Talkgroup {
     }
 
     // Remove a talkgroup from a peer
-    fn remove(&mut self, tg: u32) -> bool {
+    fn _remove(&mut self, _tg: u32) -> bool {
         false
     }
 
@@ -124,7 +124,7 @@ impl Talkgroup {
 }
 
 // If we've not heard from a peer in a while remove them
-fn clock(logins: &mut HashSet<u32>, mash: &mut HashMap<u32, Peer>) {
+fn clock(_logins: &mut HashSet<u32>, _mash: &mut HashMap<u32, Peer>) {
     //TODO
 }
 
@@ -144,7 +144,7 @@ fn main() {
     println!("Loading...");
 
     // Check the DB!
-    let db = db::init(SOFTWARE_VERSION);
+    let _db = db::init(SOFTWARE_VERSION);
 
     ctrlc::set_handler(move || {
         closedown();
@@ -177,7 +177,7 @@ fn main() {
                     for (t, p) in &mash {
                         println!(
                             "Peer details\n\nID: {}\nCall: {}\nTG active {:?}",
-                            t, p.Callsign, p.talk_groups
+                            t, p.callsign, p.talk_groups
                         );
                     }
                     stats_timer = SystemTime::now();
@@ -223,7 +223,7 @@ fn main() {
         clock(&mut logins, &mut mash);
         let mut rx_buff = [0; 500];
 
-        let (rxs, src) = match sock.recv_from(&mut rx_buff) {
+        let (_, src) = match sock.recv_from(&mut rx_buff) {
             Ok(rs) => (rs),
 
             Err(e) => {
@@ -253,9 +253,6 @@ fn main() {
                 d_counter += 1;
                 replay_counter = 0;
                 let _packet_data = &rx_buff[..53];
-                let rf_src = &rx_buff[5..8];
-                let dst_tg = &rx_buff[8..11];
-                let packet_seq = &rx_buff[4];
 
                 if d_counter > 32 {
                     d_counter = 0;
@@ -267,7 +264,7 @@ fn main() {
                 let tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
                 //let tx_buff = hbp.construct();
 
-                // Repeat to peers who are members of the same talkgroup
+                // Repeat to peers who are members of the same talkgroup and peer type.
                 for (_, p) in &mut mash {
                     match p.talk_groups.get_mut(&hbp.dst) {
                         Some(tg) => {
@@ -297,7 +294,7 @@ fn main() {
                                 );
                                 println!(
                                     "Added TG: {} to peer: id-{} call-{} ",
-                                    &hbp.dst, &p.id, &p.Callsign
+                                    &hbp.dst, &p.id, &p.callsign
                                 );
                             }
                         }
@@ -370,16 +367,16 @@ fn main() {
                     continue;
                 }
 
-                peer.Callsign = match str::from_utf8(&rx_buff[8..16]) {
+                peer.callsign = match str::from_utf8(&rx_buff[8..16]) {
                     Ok(c) => c.to_owned(),
                     Err(_) => "Unknown".to_owned(),
                 };
-                peer.Frequency = match str::from_utf8(&rx_buff[16..38]) {
+                peer.frequency = match str::from_utf8(&rx_buff[16..38]) {
                     Ok(c) => c.to_owned(),
                     Err(_) => "Unknown".to_owned(),
                 };
-                println!("Callsign is: {}", peer.Callsign);
-                println!("Frequency is: {}", peer.Frequency);
+                println!("Callsign is: {}", peer.callsign);
+                println!("Frequency is: {}", peer.frequency);
 
                 mash.insert(peer.id, peer);
 
