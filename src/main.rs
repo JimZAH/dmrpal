@@ -115,7 +115,7 @@ impl Talkgroup {
         Self {
             expire: exp,
             id: talk_group,
-            routeable: Peertype::All,
+            routeable: Peertype::Local,
             sl: sl,
             ua: ua,
             time_stamp: SystemTime::now(),
