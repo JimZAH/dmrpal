@@ -7,12 +7,20 @@ mod hb;
 
 const SOFTWARE_VERSION: u64 = 1;
 const USERACTIVATED_DISCONNECT_TG: u32 = 4000;
+const REMOTE_PEER: &str = "10.0.0.69:55555";
 
 #[derive(Debug, PartialEq)]
 enum Peertype {
     Local,
     Friend,
     All,
+}
+
+enum Systemstate {
+    Normal,
+    LoginRequest,
+    LoginPassword,
+    Logout,
 }
 
 enum TgActivate {
@@ -162,6 +170,25 @@ fn main() {
 
     // Check the DB!
     let _db = db::init(SOFTWARE_VERSION);
+
+    // Track system state
+    let system = Systemstate::Normal;
+
+    let myid = hb::RPTLPacket { id: 2351671 };
+
+    let mut mode = 0;
+
+    if !REMOTE_PEER.is_empty() {
+        // MSTACK000401780A7ED498
+        let mut testbuff = [0; 500];
+        testbuff[14] = 0x0A;
+        testbuff[15] = 0x7E;
+        testbuff[16] = 0xD4;
+        testbuff[17] = 0x98;
+        mode = 1;
+        myid.request_login();
+        myid.password_response(testbuff);
+    }
 
     ctrlc::set_handler(move || {
         closedown();
@@ -313,9 +340,8 @@ fn main() {
             hb::MSTCL => {
                 println!("Todo!2");
             }
-            hb::MSTNAK => {
-                println!("Todo!3");
-            }
+            hb::MSTACK => if mode == 2 {},
+            hb::MSTNAK => if mode == 2 {},
             hb::MSTPONG => {
                 println!("Todo!4");
             }

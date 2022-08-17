@@ -1,6 +1,9 @@
+use sha256::digest_bytes;
+
 pub const DMRA: &[u8] = b"DMRA";
 pub const DMRD: &[u8] = b"DMRD";
 pub const MSTCL: &[u8] = b"MSTCL";
+pub const MSTACK: &[u8] = b"MSTACK";
 pub const MSTNAK: &[u8] = b"MSTNAK";
 pub const MSTPONG: &[u8] = b"MSTPONG";
 pub const MSTN: &[u8] = b"MSTN";
@@ -30,6 +33,10 @@ pub struct DMRDPacket {
     pub dt: u8,
     pub si: u32,
     pub dd: [u8; 35],
+}
+
+pub struct RPTLPacket {
+    pub id: u32,
 }
 
 impl DMRDPacket {
@@ -120,5 +127,38 @@ impl DMRDPacket {
                 | (buf[19] as u32),
             dd: dmrd,
         }
+    }
+}
+
+impl RPTLPacket {
+    pub fn request_login(&self) -> [u8; 8] {
+        // MSTACK000401780A7ED498
+        let mut b = [0; 8];
+        b[0] = b'R';
+        b[1] = b'P';
+        b[2] = b'T';
+        b[3] = b'L';
+
+        b[4..8].copy_from_slice(&self.id.to_be_bytes());
+        println!("{:x?}", b);
+        b
+    }
+
+    pub fn password_response(&self, buf: [u8; 500]) -> [u8; 76] {
+        let password = b"DL5DI";
+        let mut b = [0; 76];
+        let mut pbuf = [0; 9];
+        b[0] = b'R';
+        b[1] = b'P';
+        b[2] = b'T';
+        b[3] = b'K';
+
+        let ran = &buf[14..22];
+        pbuf[0..8].copy_from_slice(&ran);
+        pbuf[4..9].copy_from_slice(password);
+        let result = digest_bytes(b"A7ED498DL5DI");
+        println!("{:x?}", pbuf);
+        println!("BUFFER: {}", result);
+        b
     }
 }
