@@ -7,7 +7,7 @@ mod hb;
 
 const SOFTWARE_VERSION: u64 = 1;
 const USERACTIVATED_DISCONNECT_TG: u32 = 4000;
-const REMOTE_PEER: &str = "10.0.0.69:55555";
+const REMOTE_PEER: &str = "";
 
 #[derive(Debug, PartialEq)]
 enum Peertype {
@@ -179,15 +179,26 @@ fn main() {
     let mut mode = 0;
 
     if !REMOTE_PEER.is_empty() {
-        // MSTACK000401780A7ED498
+        // This is just a horrible POC to see if we could login as a peer. Yes we can so now the real work begins.
+        let pip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(std::net::Ipv4Addr::new(78,129,135,43), 55555));
         let mut testbuff = [0; 500];
-        testbuff[14] = 0x0A;
-        testbuff[15] = 0x7E;
-        testbuff[16] = 0xD4;
-        testbuff[17] = 0x98;
+        let send_sock = match UdpSocket::bind("0.0.0.0:55225") {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("There was an error binding: {}", e);
+                std::process::exit(-1);
+            }
+        };
+        send_sock.send_to(&myid.request_login(), pip).unwrap();
+        send_sock.recv_from(&mut testbuff).unwrap();
         mode = 1;
-        myid.request_login();
-        myid.password_response(testbuff);
+        println!("RX FROM SERVER PEER: {:X?}", testbuff);
+        send_sock.send_to(&myid.password_response(testbuff), pip).unwrap();
+        send_sock.recv_from(&mut testbuff).unwrap();
+        println!("RX FROM SERVER PEER2: {:X?}", testbuff);
+        send_sock.send_to(&myid.info(), pip).unwrap();
+        send_sock.recv_from(&mut testbuff).unwrap();
+        println!("RX FROM SERVER PEER3: {:X?}", testbuff);
     }
 
     ctrlc::set_handler(move || {
