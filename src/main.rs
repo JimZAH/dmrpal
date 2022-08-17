@@ -6,6 +6,7 @@ mod db;
 mod hb;
 
 const SOFTWARE_VERSION: u64 = 1;
+const USERACTIVATED_DISCONNECT_TG: u32 = 4000;
 
 #[derive(Debug, PartialEq)]
 enum Peertype {
@@ -101,8 +102,24 @@ impl Talkgroup {
     }
 
     // Remove a talkgroup from a peer
-    fn _remove(&mut self, _tg: u32) -> bool {
-        false
+    fn ua_clear(&mut self) -> bool {
+        if self.ua {
+            return match self.time_stamp.elapsed() {
+                Ok(ts) => {
+                    if ts.as_secs() > self.expire {
+                        println!("Removing TG: {}, From Peer: {}", self.id, self.id);
+                        false
+                    } else {
+                        true
+                    }
+                }
+                Err(_) => {
+                    println!("There was an error passing time for UA, removing TG!");
+                    false
+                }
+            };
+        }
+        true
     }
 
     // Set a talk group to a peer
@@ -188,24 +205,9 @@ fn main() {
                         logins.remove(&p.id);
                         false
                     } else {
+                        //p.talk_groups.ua_clear();
                         p.talk_groups.retain(|_, t|{
-                            if t.ua {
-                                return match t.time_stamp.elapsed(){
-                                Ok(ts) => {
-                                    if ts.as_secs() > t.expire {
-                                        println!("Removing TG: {}, From Peer: {}", t.id, p.id);
-                                        false
-                                    } else {
-                                        true
-                                    }
-                                },
-                                Err(_) => {
-                                    println!("There was an error passing time for UA, removing TG!");
-                                    false
-                                },
-                            }
-                            }
-                            true
+                            t.ua_clear()
                     });
                         true
                     }
@@ -287,7 +289,7 @@ fn main() {
                             // If no talkgroup is found for the peer then we subscribe the peer to the talkgroup requested.
                             // If the peer does not request this talkgroup again in a 15 minute window the peer is auto-
                             // matically unsubscribed.
-                            if p.ip == src {
+                            if p.ip == src && hbp.dst != USERACTIVATED_DISCONNECT_TG {
                                 p.talk_groups.insert(
                                     hbp.dst,
                                     Talkgroup::set(hbp.sl, TgActivate::Ua(hbp.dst)),
@@ -296,6 +298,9 @@ fn main() {
                                     "Added TG: {} to peer: id-{} call-{} ",
                                     &hbp.dst, &p.id, &p.callsign
                                 );
+                            } else if hbp.dst == USERACTIVATED_DISCONNECT_TG {
+                                // Remove all UA
+                                p.talk_groups.retain(|_, t| t.ua_clear());
                             }
                         }
                     }
