@@ -206,7 +206,9 @@ impl RPTLPacket {
         b[51..60].copy_from_slice(b"+007.3412");
         b[60..63].copy_from_slice(b"103");
         b[63..84].copy_from_slice(b"NorwichNorwichNorwich");
-        b[82..103].copy_from_slice(b"Testing hotspot123455");
+        b[82..103].copy_from_slice(b"Testing hotspot423455");
+
+        //97
        
         b[228..239].copy_from_slice(b"DMRPaL:0.1B");
         b[269..275].copy_from_slice(b"DMRPaL");
