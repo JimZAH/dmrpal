@@ -90,7 +90,7 @@ impl Peer {
     }
 
     fn connect_master(&mut self) -> Systemstate{
-        let myid = hb::RPTLPacket { id: 235167102 };
+        let myid = hb::RPTLPacket { id: 235045402 };
         let pip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(std::net::Ipv4Addr::new(78,129,135,43), 55555));
         let mut rx_buff = [0; 500];
         let mut state = Systemstate::LoginRequest;
@@ -239,7 +239,7 @@ fn main() {
     // For now (lots of these for nows) we manually create the master peer.
     let mut master = Peer::new();
     master.callsign = "PHOENIXF".to_owned();
-    master.id = 235167102;
+    master.id = 235045402;
     master.last_check = SystemTime::now();
     master.peer_type = Peertype::All;
     master.software = "IPSC2".to_owned();
@@ -284,7 +284,7 @@ fn main() {
     let mut logins: HashSet<u32> = HashSet::new();
 
     // Insert the master into mash
-    mash.insert(235167102, master);
+    mash.insert(235045402, master);
 
     loop {
 
@@ -292,7 +292,7 @@ fn main() {
 
         match state{
             Systemstate::Connected => {
-                if let Some(master) = mash.get_mut(&235167102){
+                if let Some(master) = mash.get_mut(&235045402){
                 match master.last_check.elapsed(){
                     Ok(t) => {
                         if t.as_secs() > 6 {
@@ -393,7 +393,6 @@ fn main() {
                     match p.talk_groups.get_mut(&hbp.dst) {
                         Some(tg) => {
                             if tg.sl == hbp.sl
-                                && p.peer_type == tg.routeable
                                 && p.ip != src
                                 && p.ip
                                     != std::net::SocketAddr::new(
@@ -444,7 +443,7 @@ fn main() {
                 println!("Todo!4a");
             }
             hb::MSTP => {
-                println!("Todo!5");
+                println!("Received master pong");
             }
             hb::MSTC => {
                 println!("Todo!6");
