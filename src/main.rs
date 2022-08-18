@@ -385,7 +385,7 @@ fn main() {
                         hbp.src, hbp.dst, hbp.seq, hbp.sl, hbp.ct, hbp.si, payload_counter
                     );
                 }
-                let tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
+                let mut tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
                 //let tx_buff = hbp.construct();
 
                 // Repeat to peers who are members of the same talkgroup and peer type.
@@ -399,7 +399,10 @@ fn main() {
                                         IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
                                         0,
                                     )
-                            {
+                            {   
+                                if p.id == 235045402{
+                                    tx_buff[5..8].copy_from_slice(&p.id.to_be_bytes());
+                                }
                                 sock.send_to(&tx_buff, p.ip).unwrap();
                             } else if tg.ua {
                                 // Reset the time stamp for the UA talkgroup
