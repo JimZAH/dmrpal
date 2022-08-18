@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 ctrlc = { version = "3.0", features = ["termination"] }
 sled = "0.34.7"
+hmac-sha256 = "1.1.4"

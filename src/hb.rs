@@ -1,3 +1,27 @@
+use hmac_sha256::Hash;
+
+pub const DMRA: &[u8] = b"DMRA";
+pub const DMRD: &[u8] = b"DMRD";
+pub const MSTCL: &[u8] = b"MSTCL";
+pub const MSTACK: &[u8] = b"MSTACK";
+pub const MSTNAK: &[u8] = b"MSTNAK";
+pub const MSTPONG: &[u8] = b"MSTPONG";
+pub const MSTN: &[u8] = b"MSTN";
+pub const MSTP: &[u8] = b"MSTP";
+pub const MSTC: &[u8] = b"MSTC";
+pub const RPTL: &[u8] = b"RPTL";
+pub const RPTPING: &[u8] = b"RPTPING";
+pub const RPTCL: &[u8] = b"RPTCL";
+pub const RPTACK: &[u8] = b"RPTACK";
+pub const RPTNAK: &[u8] = b"RPTNAK";
+pub const RPTK: &[u8] = b"RPTK";
+pub const RPTC: &[u8] = b"RPTC";
+pub const RPTP: &[u8] = b"RPTP";
+pub const RPTA: &[u8] = b"RPTA";
+pub const RPTO: &[u8] = b"RPTO";
+pub const RPTS: &[u8] = b"RPTS";
+pub const RPTSBKN: &[u8] = b"RPTSBKN";
+
 // DMRD paclet structure
 pub struct DMRDPacket {
     pub seq: u8,
@@ -10,6 +34,27 @@ pub struct DMRDPacket {
     pub dt: u8,
     pub si: u32,
     pub dd: [u8; 35],
+}
+
+pub struct RPTCPacket {
+    callsign: [u8; 8],
+    rptrid: [u8; 4],
+    rx_freq: [u8; 9],
+    tx_freq: [u8; 9],
+    tx_pwr: [u8; 2],
+    color_code: [u8; 2],
+    latitude: [u8; 8],
+    longitude: [u8; 9],
+    height: [u8; 3],
+    location: [u8; 20],
+    description: [u8; 20],
+    url: [u8; 124],
+    software_id: [u8; 40],
+    package_id: [u8; 40]
+}
+
+pub struct RPTLPacket {
+    pub id: u32,
 }
 
 impl DMRDPacket {
@@ -100,5 +145,83 @@ impl DMRDPacket {
                 | (buf[19] as u32),
             dd: dmrd,
         }
+    }
+}
+
+impl RPTLPacket {
+    pub fn request_login(&self) -> [u8; 8] {
+        let mut b = [0; 8];
+        b[0] = b'R';
+        b[1] = b'P';
+        b[2] = b'T';
+        b[3] = b'L';
+
+        b[4..].copy_from_slice(&self.id.to_be_bytes());
+        b
+    }
+
+    pub fn password_response(&self, buf: [u8; 500]) -> [u8; 40] {
+        let password = b"PASSWORD"; 
+        let mut bf = [0; 40];
+        let mut pbuf = [0; 12];
+        bf[0] = b'R';
+        bf[1] = b'P';
+        bf[2] = b'T';
+        bf[3] = b'K';
+
+        let ran = &buf[6..10];
+
+        pbuf[0..4].copy_from_slice(ran);
+        pbuf[4..12].copy_from_slice(password);
+
+        let result = Hash::hash(&pbuf);
+
+        bf[4..8].copy_from_slice(&self.id.to_be_bytes());
+        bf[8..40].copy_from_slice(&result);
+
+        bf
+    }
+
+    pub fn info(&self) -> [u8; 302] {
+        // This is for testing only and we must write a way to extract config, this is for POC
+        let mut b = [0x20; 302];
+        let rx_f = b"434400000";
+        b[0] = b'R';
+        b[1] = b'P';
+        b[2] = b'T';
+        b[3] = b'C';
+        b[4..8].copy_from_slice(&self.id.to_be_bytes());
+        b[8] = b'M';
+        b[9] = b'X';
+        b[10] = b'0';
+        b[11] = b'W';
+        b[12] = b'V';
+        b[13] = b'V';
+        b[16..20].copy_from_slice(&self.id.to_be_bytes());
+        b[20..29].copy_from_slice(rx_f);
+        b[29..38].copy_from_slice(rx_f);
+        b[38..40].copy_from_slice(b"49");
+        b[40..42].copy_from_slice(b"49");
+        b[42..51].copy_from_slice(b"+50.42432");
+        b[51..60].copy_from_slice(b"+007.3412");
+        b[60..63].copy_from_slice(b"103");
+        b[63..84].copy_from_slice(b"NorwichNorwichNorwich");
+        b[82..103].copy_from_slice(b"Testing hotspot423455");
+
+        //97
+       
+        b[228..239].copy_from_slice(b"DMRPaL:0.1B");
+        b[269..275].copy_from_slice(b"DMRPaL");
+        b
+    }
+
+    pub fn ping(&self) -> [u8; 8]{
+        let mut b = [0; 8];
+        b[0] = b'R';
+        b[1] = b'P';
+        b[2] = b'T';
+        b[3] = b'P';
+        b[4..].copy_from_slice(&self.id.to_be_bytes());
+        b
     }
 }
