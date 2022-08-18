@@ -7,7 +7,7 @@ mod hb;
 
 const SOFTWARE_VERSION: u64 = 1;
 const USERACTIVATED_DISCONNECT_TG: u32 = 4000;
-const REMOTE_PEER: &str = "";
+const REMOTE_PEER: &str = "78,129,135,43";
 
 #[derive(Debug, PartialEq)]
 enum Peertype {
@@ -17,9 +17,10 @@ enum Peertype {
 }
 
 enum Systemstate {
-    Normal,
+    Disconnected,
     LoginRequest,
     LoginPassword,
+    Connected,
     Logout,
 }
 
@@ -85,6 +86,65 @@ impl Peer {
             }
         }
         true
+    }
+
+    fn connect_master(&mut self) -> Systemstate{
+        let myid = hb::RPTLPacket { id: 235167102 };
+        let pip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(std::net::Ipv4Addr::new(78,129,135,43), 55555));
+        let mut rx_buff = [0; 500];
+        let mut state = Systemstate::LoginRequest;
+        let sock = match UdpSocket::bind("0.0.0.0:55555") {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("There was an error binding: {}", e);
+                std::process::exit(-1);
+            }
+        };
+        loop {
+            sock.send_to(&myid.request_login(), pip).unwrap();
+
+            let (_, src) = match sock.recv_from(&mut rx_buff) {
+                Ok(rs) => (rs),
+    
+                Err(e) => {
+                    eprintln!("There was an error listening: {}", e);
+                    std::process::exit(-1);
+                }
+            };
+
+            match &rx_buff[..6] {
+                hb::RPTACK => {
+                    match &state{
+                        Systemstate::Disconnected => {
+                        },
+                        Systemstate::LoginRequest => {
+                            sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
+                            println!("sending password");
+                            state = Systemstate::LoginPassword;
+                        },
+                        Systemstate::LoginPassword => {
+                            sock.send_to(&myid.info(), pip).unwrap();
+                            println!("sending info");
+                            state = Systemstate::Connected;
+                        },
+                        Systemstate::Connected => {
+                            sock.send_to(&myid.ping(), pip).unwrap();
+                            println!("connected");
+                            self.ip = src;
+                            break;
+                        },
+                        Systemstate::Logout => {},
+                    }
+                },
+                hb::RPTNAK => {
+                    println!("MASTER Connect: Received NAK");
+                    state = Systemstate::Disconnected;
+                    break;
+                },
+               _ => println!("MASTER Connect: Packet not handled!\n{:X?}", rx_buff)
+            }
+        }
+        state
     }
 
     // Set the peer ID
@@ -171,34 +231,33 @@ fn main() {
     // Check the DB!
     let _db = db::init(SOFTWARE_VERSION);
 
-    // Track system state
-    let system = Systemstate::Normal;
-
-    let myid = hb::RPTLPacket { id: 2351671 };
-
     let mut mode = 0;
+
+    let mut state = Systemstate::Disconnected;
+
+    // For now (lots of these for nows) we manually create the master peer.
+    let mut master = Peer::new();
+    master.callsign = "PHOENIXF".to_owned();
+    master.id = 235167102;
+    master.last_check = SystemTime::now();
+    master.peer_type = Peertype::All;
+    master.software = "IPSC2".to_owned();
+    master.talk_groups = HashMap::from([
+        (23526, Talkgroup::set(2, TgActivate::Static(23526))),
+        (235, Talkgroup::set(2, TgActivate::Static(235))),
+        (840, Talkgroup::set(2, TgActivate::Static(840))),
+        (844, Talkgroup::set(2, TgActivate::Static(844))),
+        (80, Talkgroup::set(2, TgActivate::Static(80))),
+        (81, Talkgroup::set(2, TgActivate::Static(81))),
+        (82, Talkgroup::set(2, TgActivate::Static(82))),
+        (83, Talkgroup::set(2, TgActivate::Static(83))),
+        (84, Talkgroup::set(2, TgActivate::Static(84))),
+        (1, Talkgroup::set(2, TgActivate::Static(1))),
+    ]);
 
     if !REMOTE_PEER.is_empty() {
         // This is just a horrible POC to see if we could login as a peer. Yes we can so now the real work begins.
-        let pip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(std::net::Ipv4Addr::new(78,129,135,43), 55555));
-        let mut testbuff = [0; 500];
-        let send_sock = match UdpSocket::bind("0.0.0.0:55225") {
-            Ok(s) => s,
-            Err(e) => {
-                eprintln!("There was an error binding: {}", e);
-                std::process::exit(-1);
-            }
-        };
-        send_sock.send_to(&myid.request_login(), pip).unwrap();
-        send_sock.recv_from(&mut testbuff).unwrap();
-        mode = 1;
-        println!("RX FROM SERVER PEER: {:X?}", testbuff);
-        send_sock.send_to(&myid.password_response(testbuff), pip).unwrap();
-        send_sock.recv_from(&mut testbuff).unwrap();
-        println!("RX FROM SERVER PEER2: {:X?}", testbuff);
-        send_sock.send_to(&myid.info(), pip).unwrap();
-        send_sock.recv_from(&mut testbuff).unwrap();
-        println!("RX FROM SERVER PEER3: {:X?}", testbuff);
+        state = master.connect_master();
     }
 
     ctrlc::set_handler(move || {
@@ -223,7 +282,30 @@ fn main() {
     let mut mash: HashMap<u32, Peer> = HashMap::new();
     let mut logins: HashSet<u32> = HashSet::new();
 
+    // Insert the master into mash
+    mash.insert(235167102, master);
+
     loop {
+
+        // check the state of master connection
+        match state{
+            Systemstate::Connected => {
+                if let Some(master) = mash.get_mut(&235167102){
+                match master.last_check.elapsed(){
+                    Ok(t) => {
+                        master.last_check = SystemTime::now();
+                        if t.as_secs() > 10 {
+                            sock.send_to(&[hb::RPTPING, &master.id.to_be_bytes()].concat(), master.ip).unwrap();
+                            println!("Sending Master ping");
+                        }
+                    },
+                    Err(_) => {eprintln!("Error passing master time");}
+                }
+            }
+            }
+            _ => {}
+        }
+
         // Print stats at least every 1 minute and check if a peer needs removing
         match stats_timer.elapsed() {
             Ok(t) => {
@@ -354,7 +436,7 @@ fn main() {
             hb::MSTACK => if mode == 2 {},
             hb::MSTNAK => if mode == 2 {},
             hb::MSTPONG => {
-                println!("Todo!4");
+                println!("Received master pong");
             }
             hb::MSTN => {
                 println!("Todo!4a");
