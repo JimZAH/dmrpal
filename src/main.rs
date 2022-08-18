@@ -7,6 +7,7 @@ mod hb;
 
 const SOFTWARE_VERSION: u64 = 1;
 const USERACTIVATED_DISCONNECT_TG: u32 = 4000;
+const MY_ID: u32 = 235045402;
 const REMOTE_PEER: &str = "78,129,135,43";
 
 #[derive(Debug, PartialEq)]
@@ -90,7 +91,7 @@ impl Peer {
     }
 
     fn connect_master(&mut self) -> Systemstate{
-        let myid = hb::RPTLPacket { id: 235045402 };
+        let myid = hb::RPTLPacket { id: MY_ID };
         let pip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(std::net::Ipv4Addr::new(78,129,135,43), 55555));
         let mut rx_buff = [0; 500];
         let mut state = Systemstate::LoginRequest;
@@ -239,7 +240,7 @@ fn main() {
     // For now (lots of these for nows) we manually create the master peer.
     let mut master = Peer::new();
     master.callsign = "PHOENIXF".to_owned();
-    master.id = 235045402;
+    master.id = MY_ID;
     master.last_check = SystemTime::now();
     master.peer_type = Peertype::All;
     master.software = "IPSC2".to_owned();
@@ -284,7 +285,7 @@ fn main() {
     let mut logins: HashSet<u32> = HashSet::new();
 
     // Insert the master into mash
-    mash.insert(235045402, master);
+    mash.insert(MY_ID, master);
 
     loop {
 
@@ -292,7 +293,7 @@ fn main() {
 
         match state{
             Systemstate::Connected => {
-                if let Some(master) = mash.get_mut(&235045402){
+                if let Some(master) = mash.get_mut(&MY_ID){
                 match master.last_check.elapsed(){
                     Ok(t) => {
                         if t.as_secs() > 6 {
@@ -401,12 +402,8 @@ fn main() {
                                     )
                             {   
                                 // If we are sending to the master we need to rewrite the source ID
-                                if p.id == 235045402{
-                                    tx_buff[11] = (p.id >> 24) as u8;
-                                    tx_buff[12] = (p.id >> 16) as u8;
-                                    tx_buff[13] = (p.id >> 8) as u8;
-                                    tx_buff[14] = (p.id >> 0) as u8;
-                                    println!("Master packet: {:X?}", tx_buff);
+                                if p.id == MY_ID{
+                                    tx_buff[11..15].copy_from_slice(&p.id.to_be_bytes());
                                 }
                                 sock.send_to(&tx_buff, p.ip).unwrap();
                             } else if tg.ua {
@@ -472,7 +469,7 @@ fn main() {
                 println!("Todo!7");
             }
             hb::RPTACK => {
-                println!("Todo!8");
+                println!("Received master ACK");
             }
             hb::RPTK => {
                 let mut peer = Peer::new();
