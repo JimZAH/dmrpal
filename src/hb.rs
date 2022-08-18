@@ -208,10 +208,8 @@ impl RPTLPacket {
         b[63..84].copy_from_slice(b"NorwichNorwichNorwich");
         b[82..103].copy_from_slice(b"Testing hotspot123455");
        
-        b[228..269].copy_from_slice(b"linux:dmrrwweater-
-        20250742111111");
-        b[269..292].copy_from_slice(b"rpm:dmrrepeate
-        ");
+        b[228..239].copy_from_slice(b"DMRPaL:0.1B");
+        b[269..275].copy_from_slice(b"DMRPaL");
         b
     }
 
