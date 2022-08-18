@@ -292,16 +292,14 @@ fn main() {
 
         match state{
             Systemstate::Connected => {
-                println!("Checking master time");
                 if let Some(master) = mash.get_mut(&235167102){
-                    println!("Found master");
                 match master.last_check.elapsed(){
                     Ok(t) => {
-                        master.last_check = SystemTime::now();
-                        if t.as_secs() > 10 {
+                        if t.as_secs() > 6 {
                             sock.send_to(&[hb::RPTPING, &master.id.to_be_bytes()].concat(), master.ip).unwrap();
-                            println!("Sending Master ping");
+                            master.last_check = SystemTime::now();
                         }
+
                     },
                     Err(_) => {eprintln!("Error passing master time");}
                 }
