@@ -16,6 +16,7 @@ enum Peertype {
     All,
 }
 
+#[derive(Debug, PartialEq)]
 enum Systemstate {
     Disconnected,
     LoginRequest,
@@ -288,9 +289,12 @@ fn main() {
     loop {
 
         // check the state of master connection
+
         match state{
             Systemstate::Connected => {
+                println!("Checking master time");
                 if let Some(master) = mash.get_mut(&235167102){
+                    println!("Found master");
                 match master.last_check.elapsed(){
                     Ok(t) => {
                         master.last_check = SystemTime::now();
@@ -303,7 +307,7 @@ fn main() {
                 }
             }
             }
-            _ => {}
+            _ => {println!("Wrong master state");}
         }
 
         // Print stats at least every 1 minute and check if a peer needs removing
