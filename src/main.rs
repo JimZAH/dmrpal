@@ -401,12 +401,13 @@ fn main() {
                                     )
                             {   
                                 // If we are sending to the master we need to rewrite the source ID
-                                //if p.id == 235045402{
-                                //    tx_buff[5] = (p.id >> 16) as u8;
-                                //    tx_buff[6] = (p.id >> 8) as u8;
-                                //    tx_buff[7] = (p.id >> 0) as u8;
-                                //    println!("Master packet: {:X?}", tx_buff);
-                                //}
+                                if p.id == 235045402{
+                                    tx_buff[11] = (p.id >> 24) as u8;
+                                    tx_buff[12] = (p.id >> 16) as u8;
+                                    tx_buff[13] = (p.id >> 8) as u8;
+                                    tx_buff[14] = (p.id >> 0) as u8;
+                                    println!("Master packet: {:X?}", tx_buff);
+                                }
                                 sock.send_to(&tx_buff, p.ip).unwrap();
                             } else if tg.ua {
                                 // Reset the time stamp for the UA talkgroup
