@@ -401,7 +401,9 @@ fn main() {
                                     )
                             {   
                                 if p.id == 235045402{
-                                    tx_buff[5..8].copy_from_slice(&p.id.to_be_bytes());
+                                    tx_buff[5] = (p.id >> 16) as u8;
+                                    tx_buff[6] = (p.id >> 8) as u8;
+                                    tx_buff[7] = (p.id >> 0) as u8;
                                 }
                                 sock.send_to(&tx_buff, p.ip).unwrap();
                             } else if tg.ua {
