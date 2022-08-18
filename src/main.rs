@@ -248,7 +248,6 @@ fn main() {
         (23526, Talkgroup::set(2, TgActivate::Static(23526))),
         (235, Talkgroup::set(1, TgActivate::Static(235))),
         (840, Talkgroup::set(2, TgActivate::Static(840))),
-        (844, Talkgroup::set(2, TgActivate::Static(844))),
         (80, Talkgroup::set(1, TgActivate::Static(80))),
         (81, Talkgroup::set(1, TgActivate::Static(81))),
         (82, Talkgroup::set(1, TgActivate::Static(82))),
