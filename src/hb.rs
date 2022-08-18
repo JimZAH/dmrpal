@@ -192,10 +192,11 @@ impl RPTLPacket {
         b[3] = b'C';
         b[4..8].copy_from_slice(&self.id.to_be_bytes());
         b[8] = b'M';
-        b[9] = b'0';
-        b[10] = b'Z';
-        b[11] = b'A';
-        b[12] = b'H';
+        b[9] = b'X';
+        b[10] = b'0';
+        b[11] = b'W';
+        b[12] = b'V';
+        b[13] = b'V';
         b[16..20].copy_from_slice(&self.id.to_be_bytes());
         b[20..29].copy_from_slice(rx_f);
         b[29..38].copy_from_slice(rx_f);

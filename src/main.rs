@@ -245,15 +245,15 @@ fn main() {
     master.software = "IPSC2".to_owned();
     master.talk_groups = HashMap::from([
         (23526, Talkgroup::set(2, TgActivate::Static(23526))),
-        (235, Talkgroup::set(2, TgActivate::Static(235))),
+        (235, Talkgroup::set(1, TgActivate::Static(235))),
         (840, Talkgroup::set(2, TgActivate::Static(840))),
         (844, Talkgroup::set(2, TgActivate::Static(844))),
-        (80, Talkgroup::set(2, TgActivate::Static(80))),
-        (81, Talkgroup::set(2, TgActivate::Static(81))),
-        (82, Talkgroup::set(2, TgActivate::Static(82))),
-        (83, Talkgroup::set(2, TgActivate::Static(83))),
-        (84, Talkgroup::set(2, TgActivate::Static(84))),
-        (1, Talkgroup::set(2, TgActivate::Static(1))),
+        (80, Talkgroup::set(1, TgActivate::Static(80))),
+        (81, Talkgroup::set(1, TgActivate::Static(81))),
+        (82, Talkgroup::set(1, TgActivate::Static(82))),
+        (83, Talkgroup::set(1, TgActivate::Static(83))),
+        (84, Talkgroup::set(1, TgActivate::Static(84))),
+        (1, Talkgroup::set(1, TgActivate::Static(1))),
     ]);
 
     if !REMOTE_PEER.is_empty() {
