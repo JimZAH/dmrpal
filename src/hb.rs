@@ -50,7 +50,7 @@ pub struct RPTCPacket {
     description: [u8; 20],
     url: [u8; 124],
     software_id: [u8; 40],
-    package_id: [u8; 40]
+    package_id: [u8; 40],
 }
 
 pub struct RPTLPacket {
@@ -161,7 +161,7 @@ impl RPTLPacket {
     }
 
     pub fn password_response(&self, buf: [u8; 500]) -> [u8; 40] {
-        let password = b"PASSWORD"; 
+        let password = b"PASSWORD";
         let mut bf = [0; 40];
         let mut pbuf = [0; 12];
         bf[0] = b'R';
@@ -209,13 +209,13 @@ impl RPTLPacket {
         b[82..103].copy_from_slice(b"Testing system 423455");
 
         //97
-       
+
         b[228..239].copy_from_slice(b"DMRPaL:0.1B");
         b[269..275].copy_from_slice(b"DMRPaL");
         b
     }
 
-    pub fn ping(&self) -> [u8; 8]{
+    pub fn ping(&self) -> [u8; 8] {
         let mut b = [0; 8];
         b[0] = b'R';
         b[1] = b'P';
