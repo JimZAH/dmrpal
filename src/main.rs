@@ -18,7 +18,7 @@ enum Peertype {
 }
 
 #[derive(Debug, PartialEq)]
-enum Systemstate {
+enum Masterstate {
     Disconnected,
     LoginRequest,
     LoginPassword,
@@ -90,11 +90,11 @@ impl Peer {
         true
     }
 
-    fn connect_master(&mut self) -> Systemstate{
+    fn connect_master(&mut self) -> Masterstate{
         let myid = hb::RPTLPacket { id: MY_ID };
         let pip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(std::net::Ipv4Addr::new(78,129,135,43), 55555));
         let mut rx_buff = [0; 500];
-        let mut state = Systemstate::LoginRequest;
+        let mut state = Masterstate::LoginRequest;
         let sock = match UdpSocket::bind("0.0.0.0:55555") {
             Ok(s) => s,
             Err(e) => {
@@ -117,30 +117,30 @@ impl Peer {
             match &rx_buff[..6] {
                 hb::RPTACK => {
                     match &state{
-                        Systemstate::Disconnected => {
+                        Masterstate::Disconnected => {
                         },
-                        Systemstate::LoginRequest => {
+                        Masterstate::LoginRequest => {
                             sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
                             println!("sending password");
-                            state = Systemstate::LoginPassword;
+                            state.next();
                         },
-                        Systemstate::LoginPassword => {
+                        Masterstate::LoginPassword => {
                             sock.send_to(&myid.info(), pip).unwrap();
                             println!("sending info");
-                            state = Systemstate::Connected;
+                            state.next();
                         },
-                        Systemstate::Connected => {
+                        Masterstate::Connected => {
                             sock.send_to(&myid.ping(), pip).unwrap();
                             println!("connected");
                             self.ip = src;
                             break;
                         },
-                        Systemstate::Logout => {},
+                        Masterstate::Logout => {},
                     }
                 },
                 hb::RPTNAK => {
                     println!("MASTER Connect: Received NAK");
-                    state = Systemstate::Disconnected;
+                    state.reset();
                     break;
                 },
                _ => println!("MASTER Connect: Packet not handled!\n{:X?}", rx_buff)
@@ -155,6 +155,27 @@ impl Peer {
             | ((buff[1] as u32) << 16)
             | ((buff[2] as u32) << 8)
             | (buff[3] as u32);
+    }
+}
+
+impl Masterstate {
+    
+    fn new() -> Self {
+        Masterstate::Disconnected
+    }
+
+    fn next(&self) -> Self {
+        match self{
+            Masterstate::Disconnected => Masterstate::LoginRequest,
+            Masterstate::LoginRequest => Masterstate::LoginPassword,
+            Masterstate::LoginPassword => Masterstate::Connected,
+            Masterstate::Connected => Masterstate::Logout,
+            Masterstate::Logout => Masterstate::Disconnected,
+        }
+    }
+
+    fn reset(&self) {
+        Masterstate::new();
     }
 }
 
@@ -235,7 +256,7 @@ fn main() {
 
     let mut mode = 0;
 
-    let mut state = Systemstate::Disconnected;
+    let mut state = Masterstate::new();
 
     // For now (lots of these for nows) we manually create the master peer.
     let mut master = Peer::new();
@@ -291,7 +312,7 @@ fn main() {
         // check the state of master connection
 
         match state{
-            Systemstate::Connected => {
+            Masterstate::Connected => {
                 if let Some(master) = mash.get_mut(&MY_ID){
                 match master.last_check.elapsed(){
                     Ok(t) => {
