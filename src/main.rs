@@ -123,12 +123,12 @@ impl Peer {
                     Masterstate::LoginRequest => {
                         sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
                         println!("sending password");
-                        state.next();
+                        state = Masterstate::LoginPassword;
                     }
                     Masterstate::LoginPassword => {
                         sock.send_to(&myid.info(), pip).unwrap();
                         println!("sending info");
-                        state.next();
+                        state = Masterstate::Connected;
                     }
                     Masterstate::Connected => {
                         sock.send_to(&myid.ping(), pip).unwrap();
@@ -140,7 +140,7 @@ impl Peer {
                 },
                 hb::RPTNAK => {
                     println!("MASTER Connect: Received NAK");
-                    state.reset();
+                    state = Masterstate::Disconnected;
                     break;
                 }
                 _ => println!("MASTER Connect: Packet not handled!\n{:X?}", rx_buff),
@@ -155,26 +155,6 @@ impl Peer {
             | ((buff[1] as u32) << 16)
             | ((buff[2] as u32) << 8)
             | (buff[3] as u32);
-    }
-}
-
-impl Masterstate {
-    fn new() -> Self {
-        Masterstate::Disconnected
-    }
-
-    fn next(&self) -> Self {
-        match self {
-            Masterstate::Disconnected => Masterstate::LoginRequest,
-            Masterstate::LoginRequest => Masterstate::LoginPassword,
-            Masterstate::LoginPassword => Masterstate::Connected,
-            Masterstate::Connected => Masterstate::Logout,
-            Masterstate::Logout => Masterstate::Disconnected,
-        }
-    }
-
-    fn reset(&self) {
-        Masterstate::new();
     }
 }
 
@@ -255,7 +235,7 @@ fn main() {
 
     let mut mode = 0;
 
-    let mut state = Masterstate::new();
+    let mut state = Masterstate::Disconnected;
 
     // For now (lots of these for nows) we manually create the master peer.
     let mut master = Peer::new();
