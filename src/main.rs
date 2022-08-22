@@ -314,6 +314,20 @@ fn main() {
                     }
                 }
             }
+            Masterstate::Logout => {
+                // The master logged us out so lets try logging in again after 5 minutes.
+                // TODO manage peer logins better.
+                if let Some(master) = mash.get_mut(&MY_ID){
+                       if let Ok(t) = master.last_check.elapsed(){
+                        if t.as_secs() > 300 {
+                            state = Masterstate::Disconnected;
+                            //state = master.connect_master();
+                            // For now just remove the master
+                            mash.remove(&MY_ID);
+                        }
+                       }
+                }
+            },
             _ => {
                 println!("Wrong master state");
             }
@@ -461,7 +475,10 @@ fn main() {
                 println!("Received master pong");
             }
             hb::MSTC => {
-                println!("Todo!6");
+                // We've received a disconnect request from the master.
+                if state == Masterstate::Connected{
+                    state = Masterstate::Logout;
+                }
             }
             hb::RPTL => {
                 let mut peer = Peer::new();
