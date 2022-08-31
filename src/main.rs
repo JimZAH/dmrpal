@@ -374,7 +374,6 @@ fn main() {
             Masterstate::LoginPassword => {
                 sock.send_to(&myid.info(), pip).unwrap();
                 println!("sending info");
-                state = Masterstate::Connected;
             },
             Masterstate::Connected => {
                 if let Some(master) = mash.get_mut(&MY_ID) {
