@@ -1,6 +1,7 @@
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::{io, str, string, time::SystemTime};
+use dmrpal::debug;
 
 mod db;
 mod hb;
@@ -8,7 +9,7 @@ mod hb;
 const SOFTWARE_VERSION: u64 = 1;
 const USERACTIVATED_DISCONNECT_TG: u32 = 4000;
 const MY_ID: u32 = 235045402;
-const REMOTE_PEER: &str = "78,129,135,43";
+const REMOTE_PEER: &str = "78, 129, 135, 43";
 
 #[derive(Debug, PartialEq)]
 enum Peertype {
@@ -19,6 +20,7 @@ enum Peertype {
 
 #[derive(Debug, PartialEq)]
 enum Masterstate {
+    Disable,
     Disconnected,
     LoginRequest,
     LoginPassword,
@@ -119,6 +121,7 @@ impl Peer {
 
             match &rx_buff[..6] {
                 hb::RPTACK => match &state {
+                    Masterstate::Disable => {}
                     Masterstate::Disconnected => {}
                     Masterstate::LoginRequest => {
                         sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
@@ -263,7 +266,9 @@ fn main() {
 
     if !REMOTE_PEER.is_empty() {
         // This is just a horrible POC to see if we could login as a peer. Yes we can so now the real work begins.
-        state = master.connect_master();
+        state = Masterstate::LoginRequest;
+    } else {
+        state = Masterstate::Disable;
     }
 
     ctrlc::set_handler(move || {
@@ -291,48 +296,13 @@ fn main() {
     // Insert the master into mash
     mash.insert(MY_ID, master);
 
+    let myid = hb::RPTLPacket { id: MY_ID };
+    let pip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(
+        std::net::Ipv4Addr::new(78, 129, 135, 43),
+        55555,
+        ));
+
     loop {
-        // check the state of master connection
-
-        match state {
-            Masterstate::Connected => {
-                if let Some(master) = mash.get_mut(&MY_ID) {
-                    match master.last_check.elapsed() {
-                        Ok(t) => {
-                            if t.as_secs() > 6 {
-                                sock.send_to(
-                                    &[hb::RPTPING, &master.id.to_be_bytes()].concat(),
-                                    master.ip,
-                                )
-                                .unwrap();
-                                master.last_check = SystemTime::now();
-                            }
-                        }
-                        Err(_) => {
-                            eprintln!("Error passing master time");
-                        }
-                    }
-                }
-            }
-            Masterstate::Logout => {
-                // The master logged us out so lets try logging in again after 5 minutes.
-                // TODO manage peer logins better.
-                if let Some(master) = mash.get_mut(&MY_ID){
-                       if let Ok(t) = master.last_check.elapsed(){
-                        if t.as_secs() > 300 {
-                            state = Masterstate::Disconnected;
-                            //state = master.connect_master();
-                            // For now just remove the master
-                            mash.remove(&MY_ID);
-                        }
-                       }
-                }
-            },
-            _ => {
-                println!("Wrong master state");
-            }
-        }
-
         // Print stats at least every 1 minute and check if a peer needs removing
         match stats_timer.elapsed() {
             Ok(t) => {
@@ -392,6 +362,56 @@ fn main() {
         payload_counter += 1;
         if !dvec.is_empty() {
             replay_counter += 1;
+        }
+
+        // check the state of master connection
+        match state {
+            Masterstate::Disable => {},
+            Masterstate::LoginRequest => {
+                sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
+                println!("sending password");
+            },
+            Masterstate::LoginPassword => {
+                sock.send_to(&myid.info(), pip).unwrap();
+                println!("sending info");
+                state = Masterstate::Connected;
+            },
+            Masterstate::Connected => {
+                if let Some(master) = mash.get_mut(&MY_ID) {
+                    match master.last_check.elapsed() {
+                        Ok(t) => {
+                            if t.as_secs() > 6 {
+                                sock.send_to(
+                                    &[hb::RPTPING, &master.id.to_be_bytes()].concat(),
+                                    master.ip,
+                                )
+                                .unwrap();
+                                master.last_check = SystemTime::now();
+                            }
+                        }
+                        Err(_) => {
+                            eprintln!("Error passing master time");
+                        }
+                    }
+                }
+            }
+            Masterstate::Logout => {
+                // The master logged us out so lets try logging in again after 5 minutes.
+                // TODO manage peer logins better.
+                if let Some(master) = mash.get_mut(&MY_ID){
+                       if let Ok(t) = master.last_check.elapsed(){
+                        if t.as_secs() > 300 {
+                            state = Masterstate::Disconnected;
+                            //state = master.connect_master();
+                            // For now just remove the master
+                            mash.remove(&MY_ID);
+                        }
+                       }
+                }
+            },
+            _ => {
+                println!("Wrong master state");
+            }
         }
         match &rx_buff[..4] {
             hb::DMRA => {
@@ -563,6 +583,12 @@ fn main() {
             }
             hb::RPTA => {
                 println!("Todo!10");
+                state = match state {
+                    Masterstate::LoginRequest => Masterstate::LoginPassword,
+                    Masterstate::LoginPassword => Masterstate::Connected,
+                    _ => {debug("RPTACK RECEIVED: UNKNOWN Masterstate");
+                        Masterstate::Disable}
+                }
             }
             hb::RPTO => {
                 println!("Todo!11");
