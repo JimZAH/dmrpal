@@ -371,7 +371,9 @@ fn main() {
         let mut rx_buff = [0; 500];
 
         let (_, src) = match sock.recv_from(&mut rx_buff) {
-            Ok(rs) => (rs),
+            Ok(rs) => {
+                payload_counter += 1;
+                (rs)},
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => (
                 0,
                 std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
@@ -390,7 +392,6 @@ fn main() {
             dvec.clear();
         }
 
-        payload_counter += 1;
         if !dvec.is_empty() {
             replay_counter += 1;
         }
