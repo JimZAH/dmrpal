@@ -239,7 +239,7 @@ impl RPTOPacket {
         b[2] = b'T';
         b[3] = b'O';
         b[4..8].copy_from_slice(&id.to_be_bytes());
-        b[8..].copy_from_slice(options.as_bytes());
+        b[8..options.len()].copy_from_slice(options.as_bytes());
         b
     }
 
