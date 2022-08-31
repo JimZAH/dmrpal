@@ -587,6 +587,7 @@ fn main() {
                     Masterstate::LoginRequest => Masterstate::LoginPassword,
                     Masterstate::LoginPassword => Masterstate::Connected,
                     _ => {debug("RPTACK RECEIVED: UNKNOWN Masterstate");
+                    debug(state);
                         Masterstate::Disable}
                 }
             }
