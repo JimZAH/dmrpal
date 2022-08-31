@@ -76,7 +76,7 @@ impl Peer {
             talk_groups: HashMap::from([
                 (0, Talkgroup::default()),
                 (31337, Talkgroup::set(2, TgActivate::Static(31337))),
-                (23526, Talkgroup::set(2, TgActivate::Static(23526))),
+                (23526, Talkgroup::set(1, TgActivate::Static(23526))),
                 (2351, Talkgroup::set(1, TgActivate::Static(2351))),
                 (235, Talkgroup::set(1, TgActivate::Static(235))),
                 (840, Talkgroup::set(2, TgActivate::Static(840))),
@@ -266,7 +266,7 @@ fn main() {
     master.peer_type = Peertype::All;
     master.software = "IPSC2".to_owned();
     master.talk_groups = HashMap::from([
-        (23526, Talkgroup::set(2, TgActivate::Static(23526))),
+        (23526, Talkgroup::set(1, TgActivate::Static(23526))),
         (2351, Talkgroup::set(1, TgActivate::Static(2351))),
         (235, Talkgroup::set(1, TgActivate::Static(235))),
         (840, Talkgroup::set(2, TgActivate::Static(840))),
