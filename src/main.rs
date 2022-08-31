@@ -46,6 +46,7 @@ struct Peer {
     height: u16,
     ip: std::net::SocketAddr,
     talk_groups: HashMap<u32, Talkgroup>,
+    options: String,
     peer_type: Peertype,
 }
 
@@ -91,6 +92,7 @@ impl Peer {
                 (2, Talkgroup::set(1, TgActivate::Static(2))),
                 (1, Talkgroup::set(1, TgActivate::Static(1))),
             ]),
+            options: string::String::default(),
             peer_type: Peertype::Local,
         }
     }
@@ -328,8 +330,8 @@ fn main() {
                     println!("Number of logins: {}", logins.len());
                     for (t, p) in &mash {
                         println!(
-                            "Peer details\n\nID: {}\nCall: {}\nTG active {:?}",
-                            t, p.callsign, p.talk_groups
+                            "Peer details\n\nID: {}\nCall: {}\nTG active {:?}\nOptions: {}",
+                            t, p.callsign, p.talk_groups, p.options
                         );
                     }
                     stats_timer = SystemTime::now();
@@ -608,8 +610,19 @@ fn main() {
                 }
             }
             hb::RPTO => {
-                println!("Peer as sent options:");
+                let mut peer = Peer::new();
+                let peer_options = hb::RPTOPacket::parse(rx_buff);
+                peer.pid(&<[u8; 4]>::try_from(&rx_buff[7..11]).unwrap());
+                println!("Peer {}; has sent options:", peer.id);
                 println!("{:X?}", rx_buff);
+                match mash.get_mut(&peer.id) {
+                    Some(p) => {
+                        p.options = peer_options.options;
+                        sock.send_to(&[hb::RPTACK, &rx_buff[4..8]].concat(), src)
+                    .unwrap();
+                    }
+                    None => continue,
+                };
             }
             hb::RPTS => {
                 println!("Todo!12");

@@ -57,6 +57,11 @@ pub struct RPTLPacket {
     pub id: u32,
 }
 
+pub struct RPTOPacket {
+    pub id: u32,
+    pub options: String,
+}
+
 impl DMRDPacket {
     // TODO: Data type 4 bits
     pub fn construct(&self) -> [u8; 55] {
@@ -223,5 +228,14 @@ impl RPTLPacket {
         b[3] = b'P';
         b[4..].copy_from_slice(&self.id.to_be_bytes());
         b
+    }
+}
+
+impl RPTOPacket {
+    pub fn parse(buf: [u8; 500]) -> Self{
+        Self {
+            id: ((buf[5] as u32) << 16) | ((buf[6] as u32) << 8) | (buf[7] as u32),
+            options: String::from_utf8_lossy(&buf[8..]).to_string()
+        }
     }
 }
