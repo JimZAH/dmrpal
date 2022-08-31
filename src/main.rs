@@ -608,7 +608,8 @@ fn main() {
                 }
             }
             hb::RPTO => {
-                println!("Todo!11");
+                println!("Peer as sent options:");
+                println!("{:X?}", rx_buff);
             }
             hb::RPTS => {
                 println!("Todo!12");
