@@ -234,6 +234,8 @@ impl RPTLPacket {
 impl RPTOPacket {
     pub fn construct(id: u32, options: String) -> [u8; 500]{
         let mut b = [0; 500];
+        println!("{}", options);
+        println!("{}", options.len());
         b[0] = b'R';
         b[1] = b'P';
         b[2] = b'T';
