@@ -307,6 +307,8 @@ fn main() {
         }
     };
 
+    sock.set_nonblocking(true).unwrap();
+
     let mut dvec: Vec<[u8; 55]> = Vec::new();
     let mut replay_counter = 0;
     let mut d_counter = 31;
@@ -370,7 +372,9 @@ fn main() {
 
         let (_, src) = match sock.recv_from(&mut rx_buff) {
             Ok(rs) => (rs),
-
+            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                (0,std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0))
+            },
             Err(e) => {
                 eprintln!("There was an error listening: {}", e);
                 std::process::exit(-1);
@@ -649,11 +653,7 @@ fn main() {
                 println!("Todo!13");
             }
             _ => {
-                match std::str::from_utf8(&rx_buff[..4]) {
-                    Ok(s) => println!("Unknown packet? {}", s),
-                    Err(_) => eprintln!("Unknown packet header"),
-                }
-                payload_counter -= 1;
+                std::thread::sleep(std::time::Duration::from_millis(5));
             }
         }
     }
