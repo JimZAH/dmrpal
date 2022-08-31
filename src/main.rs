@@ -432,7 +432,7 @@ fn main() {
                 }
             },
             Masterstate::Options => {
-                let options = hb::RPTOPacket::construct(MY_ID, "TS1_1=23526".to_string());
+                let options = hb::RPTOPacket::construct(MY_ID, "TS1_1=23526;TS1_2=1;TS1_3=235;TS2_1=840;TS2_2=844".to_string());
                 println!("Sending options to master");
                 sock.send_to(&options, pip).unwrap();
             }
