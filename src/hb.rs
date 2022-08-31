@@ -211,7 +211,7 @@ impl RPTLPacket {
         b[51..60].copy_from_slice(b"+007.3412");
         b[60..63].copy_from_slice(b"103");
         b[63..84].copy_from_slice(b"NorwichNorwichNorwich");
-        b[82..103].copy_from_slice(b"Testing system 423455");
+        b[82..103].copy_from_slice(b"Testing system 323455");
 
         //97
 
