@@ -244,6 +244,10 @@ fn main() {
     let mut master = Peer::new();
     master.callsign = "PHOENIXF".to_owned();
     master.id = MY_ID;
+    master.ip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(
+        std::net::Ipv4Addr::new(78, 129, 135, 43),
+        55555,
+        ));
     master.last_check = SystemTime::now();
     master.peer_type = Peertype::All;
     master.software = "IPSC2".to_owned();
