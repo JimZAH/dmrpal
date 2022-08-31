@@ -74,6 +74,7 @@ name = "dmrpal"
 version = "0.1.0"
 dependencies = [
  "ctrlc",
+ "hmac-sha256",
  "sled",
 ]
 
@@ -95,6 +96,12 @@ checksum = "c31b6d751ae2c7f11320402d34e41349dd1016f8d5d45e48c4312bc8625af50c"
 dependencies = [
  "byteorder",
 ]
+
+[[package]]
+name = "hmac-sha256"
+version = "1.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd29dbba58ee5314f3ec570066d78a3f4772bf45b322efcf2ce2a43af69a4d85"
 
 [[package]]
 name = "instant"

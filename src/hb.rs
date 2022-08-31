@@ -50,11 +50,16 @@ pub struct RPTCPacket {
     description: [u8; 20],
     url: [u8; 124],
     software_id: [u8; 40],
-    package_id: [u8; 40]
+    package_id: [u8; 40],
 }
 
 pub struct RPTLPacket {
     pub id: u32,
+}
+
+pub struct RPTOPacket {
+    pub id: u32,
+    pub options: String,
 }
 
 impl DMRDPacket {
@@ -161,7 +166,7 @@ impl RPTLPacket {
     }
 
     pub fn password_response(&self, buf: [u8; 500]) -> [u8; 40] {
-        let password = b"PASSWORD"; 
+        let password = b"PASSWORD";
         let mut bf = [0; 40];
         let mut pbuf = [0; 12];
         bf[0] = b'R';
@@ -206,16 +211,16 @@ impl RPTLPacket {
         b[51..60].copy_from_slice(b"+007.3412");
         b[60..63].copy_from_slice(b"103");
         b[63..84].copy_from_slice(b"NorwichNorwichNorwich");
-        b[82..103].copy_from_slice(b"Testing hotspot423455");
+        b[82..103].copy_from_slice(b"Testing system 323455");
 
         //97
-       
+
         b[228..239].copy_from_slice(b"DMRPaL:0.1B");
         b[269..275].copy_from_slice(b"DMRPaL");
         b
     }
 
-    pub fn ping(&self) -> [u8; 8]{
+    pub fn ping(&self) -> [u8; 8] {
         let mut b = [0; 8];
         b[0] = b'R';
         b[1] = b'P';
@@ -223,5 +228,26 @@ impl RPTLPacket {
         b[3] = b'P';
         b[4..].copy_from_slice(&self.id.to_be_bytes());
         b
+    }
+}
+
+impl RPTOPacket {
+    pub fn construct(id: u32, options: String) -> [u8; 500] {
+        let mut b = [0; 500];
+        let options_size = options.len();
+        b[0] = b'R';
+        b[1] = b'P';
+        b[2] = b'T';
+        b[3] = b'O';
+        b[4..8].copy_from_slice(&id.to_be_bytes());
+        b[8..options_size + 8].copy_from_slice(options.as_bytes());
+        b
+    }
+
+    pub fn parse(buf: [u8; 500]) -> Self {
+        Self {
+            id: ((buf[5] as u32) << 16) | ((buf[6] as u32) << 8) | (buf[7] as u32),
+            options: String::from_utf8_lossy(&buf[8..]).to_string(),
+        }
     }
 }
