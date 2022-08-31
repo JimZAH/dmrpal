@@ -612,7 +612,7 @@ fn main() {
             hb::RPTO => {
                 let mut peer = Peer::new();
                 let peer_options = hb::RPTOPacket::parse(rx_buff);
-                peer.pid(&<[u8; 4]>::try_from(&rx_buff[7..11]).unwrap());
+                peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
                 println!("Peer {}; has sent options:", peer.id);
                 println!("{:X?}", rx_buff);
                 match mash.get_mut(&peer.id) {
