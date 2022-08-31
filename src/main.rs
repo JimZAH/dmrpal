@@ -375,7 +375,7 @@ fn main() {
         let (_, src) = match sock.recv_from(&mut rx_buff) {
             Ok(rs) => {
                 payload_counter += 1;
-                (rs)},
+                rs},
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => (
                 0,
                 std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
