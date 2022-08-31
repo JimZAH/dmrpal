@@ -232,6 +232,17 @@ impl RPTLPacket {
 }
 
 impl RPTOPacket {
+    pub fn construct(id: u32, options: String) -> [u8; 500]{
+        let mut b = [0; 500];
+        b[0] = b'R';
+        b[1] = b'P';
+        b[2] = b'T';
+        b[3] = b'O';
+        b[4..8].copy_from_slice(&id.to_be_bytes());
+        b[8..].copy_from_slice(options.as_bytes());
+        b
+    }
+
     pub fn parse(buf: [u8; 500]) -> Self{
         Self {
             id: ((buf[5] as u32) << 16) | ((buf[6] as u32) << 8) | (buf[7] as u32),

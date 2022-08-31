@@ -24,6 +24,7 @@ enum Masterstate {
     Disconnected,
     LoginRequest,
     LoginPassword,
+    Options,
     Connected,
     Logout,
 }
@@ -155,6 +156,7 @@ impl Peer {
                         self.ip = src;
                         break;
                     }
+                    Masterstate::Options => {}
                     Masterstate::Logout => {}
                 },
                 hb::RPTNAK => {
@@ -283,6 +285,7 @@ fn main() {
         (2, Talkgroup::set(1, TgActivate::Static(2))),
         (1, Talkgroup::set(1, TgActivate::Static(1))),
     ]);
+    master.options = "TS1_1=23526".to_owned();
 
     if !REMOTE_PEER.is_empty() {
         // This is just a horrible POC to see if we could login as a peer. Yes we can so now the real work begins.
@@ -312,6 +315,9 @@ fn main() {
 
     let mut mash: HashMap<u32, Peer> = HashMap::new();
     let mut logins: HashSet<u32> = HashSet::new();
+
+    // This needs to be automatic but for now lets be dirty and set manually.
+    let dirty_master_options: bool = true;
 
     // Insert the master into mash
     mash.insert(MY_ID, master);
@@ -425,10 +431,16 @@ fn main() {
                        }
                 }
             },
+            Masterstate::Options => {
+                let options = hb::RPTOPacket::construct(MY_ID, "TS1_1=23526".to_string());
+                println!("Sending options to master");
+                sock.send_to(&options, pip).unwrap();
+            }
             _ => {
                 println!("Wrong master state");
             }
         }
+
         match &rx_buff[..4] {
             hb::DMRA => {
                 println!("Todo! 1");
@@ -601,9 +613,15 @@ fn main() {
                 println!("Todo!10");
                 state = match state {
                     Masterstate::LoginRequest => Masterstate::LoginPassword,
-                    Masterstate::LoginPassword => Masterstate::Connected,
+                    Masterstate::LoginPassword => {
+                        if !dirty_master_options{
+                            Masterstate::Connected
+                        } else {
+                            Masterstate::Options
+                        }
+                    },
                     Masterstate::Logout => Masterstate::Logout,
-                    Masterstate::Connected => Masterstate::Connected,
+                    Masterstate::Connected|Masterstate::Options => Masterstate::Connected,
                     _ => {debug("RPTACK RECEIVED: UNKNOWN Masterstate");
                         println!("Master state: {:?}", state);
                         Masterstate::Disable}
