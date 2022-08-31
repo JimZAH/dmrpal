@@ -589,6 +589,7 @@ fn main() {
                 state = match state {
                     Masterstate::LoginRequest => Masterstate::LoginPassword,
                     Masterstate::LoginPassword => Masterstate::Connected,
+                    Masterstate::Connected => Masterstate::Connected,
                     _ => {debug("RPTACK RECEIVED: UNKNOWN Masterstate");
                         println!("Master state: {:?}", state);
                         Masterstate::Disable}
