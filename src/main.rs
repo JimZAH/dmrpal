@@ -1,7 +1,7 @@
+use dmrpal::debug;
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::{io, str, string, time::SystemTime};
-use dmrpal::debug;
 
 mod db;
 mod hb;
@@ -265,7 +265,7 @@ fn main() {
     master.ip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(
         std::net::Ipv4Addr::new(78, 129, 135, 43),
         55555,
-        ));
+    ));
     master.last_check = SystemTime::now();
     master.peer_type = Peertype::All;
     master.software = "IPSC2".to_owned();
@@ -328,7 +328,7 @@ fn main() {
     let pip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(
         std::net::Ipv4Addr::new(78, 129, 135, 43),
         55555,
-        ));
+    ));
 
     loop {
         // Print stats at least every 1 minute and check if a peer needs removing
@@ -372,9 +372,10 @@ fn main() {
 
         let (_, src) = match sock.recv_from(&mut rx_buff) {
             Ok(rs) => (rs),
-            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                (0,std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0))
-            },
+            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => (
+                0,
+                std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
+            ),
             Err(e) => {
                 eprintln!("There was an error listening: {}", e);
                 std::process::exit(-1);
@@ -396,15 +397,15 @@ fn main() {
 
         // check the state of master connection
         match state {
-            Masterstate::Disable => {},
+            Masterstate::Disable => {}
             Masterstate::LoginRequest => {
                 sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
                 println!("sending password");
-            },
+            }
             Masterstate::LoginPassword => {
                 sock.send_to(&myid.info(), pip).unwrap();
                 println!("sending info");
-            },
+            }
             Masterstate::Connected => {
                 if let Some(master) = mash.get_mut(&MY_ID) {
                     match master.last_check.elapsed() {
@@ -427,16 +428,19 @@ fn main() {
             Masterstate::Logout => {
                 // The master logged us out so lets try logging in again after 5 minutes.
                 // TODO manage peer logins better.
-                if let Some(master) = mash.get_mut(&MY_ID){
-                       if let Ok(t) = master.last_check.elapsed(){
+                if let Some(master) = mash.get_mut(&MY_ID) {
+                    if let Ok(t) = master.last_check.elapsed() {
                         if t.as_secs() > 300 {
                             state = Masterstate::LoginRequest;
                         }
-                       }
+                    }
                 }
-            },
+            }
             Masterstate::Options => {
-                let options = hb::RPTOPacket::construct(MY_ID, "TS1_1=23526;TS1_2=1;TS1_3=235;TS2_1=840;TS2_2=844".to_string());
+                let options = hb::RPTOPacket::construct(
+                    MY_ID,
+                    "TS1_1=23526;TS1_2=1;TS1_3=235;TS2_1=840;TS2_2=844".to_string(),
+                );
                 println!("Sending options to master");
                 sock.send_to(&options, pip).unwrap();
             }
@@ -528,7 +532,7 @@ fn main() {
             }
             hb::MSTC => {
                 // We've received a disconnect request from the master.
-                if state == Masterstate::Connected{
+                if state == Masterstate::Connected {
                     state = Masterstate::Logout;
                 }
             }
@@ -618,17 +622,19 @@ fn main() {
                 state = match state {
                     Masterstate::LoginRequest => Masterstate::LoginPassword,
                     Masterstate::LoginPassword => {
-                        if !dirty_master_options{
+                        if !dirty_master_options {
                             Masterstate::Connected
                         } else {
                             Masterstate::Options
                         }
-                    },
+                    }
                     Masterstate::Logout => Masterstate::Logout,
-                    Masterstate::Connected|Masterstate::Options => Masterstate::Connected,
-                    _ => {debug("RPTACK RECEIVED: UNKNOWN Masterstate");
+                    Masterstate::Connected | Masterstate::Options => Masterstate::Connected,
+                    _ => {
+                        debug("RPTACK RECEIVED: UNKNOWN Masterstate");
                         println!("Master state: {:?}", state);
-                        Masterstate::Disable}
+                        Masterstate::Disable
+                    }
                 }
             }
             hb::RPTO => {
@@ -641,7 +647,7 @@ fn main() {
                     Some(p) => {
                         p.options = peer_options.options;
                         sock.send_to(&[hb::RPTACK, &rx_buff[4..8]].concat(), src)
-                    .unwrap();
+                            .unwrap();
                     }
                     None => continue,
                 };
