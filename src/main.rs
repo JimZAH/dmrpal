@@ -1,4 +1,4 @@
-use dmrpal::debug;
+use dmrpal::{debug, sleep};
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::{io, str, string, time::SystemTime};
@@ -144,11 +144,13 @@ impl Peer {
                         sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
                         println!("sending password");
                         state = Masterstate::LoginPassword;
+                        sleep(30);
                     }
                     Masterstate::LoginPassword => {
                         sock.send_to(&myid.info(), pip).unwrap();
                         println!("sending info");
                         state = Masterstate::Connected;
+                        sleep(30);
                     }
                     Masterstate::Connected => {
                         sock.send_to(&myid.ping(), pip).unwrap();
@@ -660,7 +662,7 @@ fn main() {
                 println!("Todo!13");
             }
             _ => {
-                std::thread::sleep(std::time::Duration::from_millis(5));
+                sleep(5);
             }
         }
     }
