@@ -15,5 +15,5 @@ pub fn debug(text: &str) {
 }
 
 pub fn sleep(time: u64) {
-    thread::sleep(time::Duration::from_millis(time));
+    thread::sleep(time::Duration::from_micros(time));
 }

@@ -144,13 +144,13 @@ impl Peer {
                         sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
                         println!("sending password");
                         state = Masterstate::LoginPassword;
-                        sleep(30);
+                        sleep(80000);
                     }
                     Masterstate::LoginPassword => {
                         sock.send_to(&myid.info(), pip).unwrap();
                         println!("sending info");
                         state = Masterstate::Connected;
-                        sleep(30);
+                        sleep(80000);
                     }
                     Masterstate::Connected => {
                         sock.send_to(&myid.ping(), pip).unwrap();
@@ -404,10 +404,12 @@ fn main() {
             Masterstate::LoginRequest => {
                 sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
                 println!("sending password");
+                sleep(80000);
             }
             Masterstate::LoginPassword => {
                 sock.send_to(&myid.info(), pip).unwrap();
                 println!("sending info");
+                sleep(80000);
             }
             Masterstate::Connected => {
                 if let Some(master) = mash.get_mut(&MY_ID) {
@@ -662,7 +664,7 @@ fn main() {
                 println!("Todo!13");
             }
             _ => {
-                sleep(5);
+                sleep(500);
             }
         }
     }
