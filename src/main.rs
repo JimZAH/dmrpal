@@ -1,4 +1,4 @@
-use dmrpal::{debug, sleep};
+use dmrpal::{debug, sleep, Systemstate, SystemState};
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::{io, str, string, time::SystemTime};
@@ -234,7 +234,7 @@ impl Talkgroup {
 }
 
 // If we've not heard from a peer in a while remove them
-fn clock(_logins: &mut HashSet<u32>, _mash: &mut HashMap<u32, Peer>) {
+fn clock() {
     //TODO
 }
 
@@ -369,7 +369,7 @@ fn main() {
             Err(_) => {}
         }
 
-        clock(&mut logins, &mut mash);
+        clock();
         let mut rx_buff = [0; 500];
 
         let (_, src) = match sock.recv_from(&mut rx_buff) {
