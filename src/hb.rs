@@ -22,6 +22,8 @@ pub const RPTO: &[u8] = b"RPTO";
 pub const RPTS: &[u8] = b"RPTS";
 pub const RPTSBKN: &[u8] = b"RPTSBKN";
 
+pub const RX_BUFF_MAX: usize = 512;
+
 // DMRD paclet structure
 pub struct DMRDPacket {
     pub seq: u8,
@@ -112,7 +114,7 @@ impl DMRDPacket {
 
     // Parse DMRD packet
     // TODO: Data type 4 bits
-    pub fn parse(buf: [u8; 500]) -> Self {
+    pub fn parse(buf: [u8; RX_BUFF_MAX]) -> Self {
         let mut c_type = 0;
         let mut f_type = 0;
         let mut slot = 1;
@@ -165,7 +167,7 @@ impl RPTLPacket {
         b
     }
 
-    pub fn password_response(&self, buf: [u8; 500]) -> [u8; 40] {
+    pub fn password_response(&self, buf: [u8; RX_BUFF_MAX]) -> [u8; 40] {
         let password = b"PASSWORD";
         let mut bf = [0; 40];
         let mut pbuf = [0; 12];
@@ -232,8 +234,8 @@ impl RPTLPacket {
 }
 
 impl RPTOPacket {
-    pub fn construct(id: u32, options: String) -> [u8; 500] {
-        let mut b = [0; 500];
+    pub fn construct(id: u32, options: String) -> [u8; RX_BUFF_MAX] {
+        let mut b = [0; RX_BUFF_MAX];
         let options_size = options.len();
         b[0] = b'R';
         b[1] = b'P';
@@ -244,7 +246,7 @@ impl RPTOPacket {
         b
     }
 
-    pub fn parse(buf: [u8; 500]) -> Self {
+    pub fn parse(buf: [u8; RX_BUFF_MAX]) -> Self {
         Self {
             id: ((buf[5] as u32) << 16) | ((buf[6] as u32) << 8) | (buf[7] as u32),
             options: String::from_utf8_lossy(&buf[8..]).to_string(),

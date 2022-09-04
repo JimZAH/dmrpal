@@ -1,4 +1,4 @@
-use dmrpal::{debug, sleep, SystemState, Systemstate};
+use dmrpal::{debug, sleep, master, SystemState, Systemstate};
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::{io, str, string, time::SystemTime};
@@ -116,7 +116,7 @@ impl Peer {
             std::net::Ipv4Addr::new(78, 129, 135, 43),
             55555,
         ));
-        let mut rx_buff = [0; 500];
+        let mut rx_buff = [0; hb::RX_BUFF_MAX];
         let mut state = Masterstate::LoginRequest;
         let sock = match UdpSocket::bind("0.0.0.0:55555") {
             Ok(s) => s,
@@ -334,7 +334,7 @@ fn main() {
         55555,
     ));
 
-    let mut rx_buff = [0; 500];
+    let mut rx_buff = [0; hb::RX_BUFF_MAX];
 
     loop {
         // Print stats at least every 1 minute and check if a peer needs removing
@@ -667,6 +667,6 @@ fn main() {
                 sleep(300);
             }
         }
-        rx_buff = [0; 500];
+        rx_buff = [0; hb::RX_BUFF_MAX];
     }
 }
