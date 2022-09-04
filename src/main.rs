@@ -1,4 +1,4 @@
-use dmrpal::{debug, sleep, Systemstate, SystemState};
+use dmrpal::{debug, sleep, SystemState, Systemstate};
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::{io, str, string, time::SystemTime};
@@ -26,6 +26,7 @@ enum Masterstate {
     LoginPassword,
     Options,
     Connected,
+    WaitingPong,
     Logout,
 }
 
@@ -160,6 +161,7 @@ impl Peer {
                     }
                     Masterstate::Options => {}
                     Masterstate::Logout => {}
+                    _ => {}
                 },
                 hb::RPTNAK => {
                     println!("MASTER Connect: Received NAK");
@@ -376,7 +378,8 @@ fn main() {
         let (_, src) = match sock.recv_from(&mut rx_buff) {
             Ok(rs) => {
                 payload_counter += 1;
-                rs},
+                rs
+            }
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => (
                 0,
                 std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
@@ -400,59 +403,68 @@ fn main() {
         }
 
         // check the state of master connection
-        match state {
-            Masterstate::Disable => {}
-            Masterstate::LoginRequest => {
-                sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
-                println!("sending password");
-                sleep(95000);
-            }
-            Masterstate::LoginPassword => {
-                sock.send_to(&myid.info(), pip).unwrap();
-                println!("sending info");
-                sleep(95000);
-            }
-            Masterstate::Connected => {
-                if let Some(master) = mash.get_mut(&MY_ID) {
-                    match master.last_check.elapsed() {
-                        Ok(t) => {
-                            if t.as_secs() > 15 {
-                                sock.send_to(
-                                    &[hb::RPTPING, &master.id.to_be_bytes()].concat(),
-                                    master.ip,
-                                )
-                                .unwrap();
-                            } else if t.as_secs() > 30{
-                                state = Masterstate::Logout;
-                            }
-                        }
-                        Err(_) => {
-                            eprintln!("Error passing master time");
+
+        if let Some(master) = mash.get_mut(&MY_ID) {
+            match state {
+                Masterstate::Disable => {}
+                Masterstate::LoginRequest => {
+                    sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
+                    println!("sending password");
+                    sleep(95000);
+                }
+                Masterstate::LoginPassword => {
+                    sock.send_to(&myid.info(), pip).unwrap();
+                    println!("sending info");
+                    sleep(95000);
+                }
+                Masterstate::Connected => match master.last_check.elapsed() {
+                    Ok(t) => {
+                        if t.as_secs() > 15 {
+                            sock.send_to(
+                                &[hb::RPTPING, &master.id.to_be_bytes()].concat(),
+                                master.ip,
+                            )
+                            .unwrap();
+                            state = Masterstate::WaitingPong;
                         }
                     }
-                }
-            }
-            Masterstate::Logout => {
-                // The master logged us out so lets try logging in again after 5 minutes.
-                // TODO manage peer logins better.
-                if let Some(master) = mash.get_mut(&MY_ID) {
+                    Err(_) => {
+                        eprintln!("Error passing master last check time");
+                    }
+                },
+                Masterstate::WaitingPong => match master.last_check.elapsed() {
+                    Ok(t) => {
+                        if t.as_secs() < 30 {
+                            state = Masterstate::Connected;
+                        } else {
+                            state = Masterstate::Logout;
+                        }
+                    }
+                    Err(_) => {
+                        eprintln!("Error passing master last check time");
+                    }
+                },
+                Masterstate::Logout => {
+                    // The master logged us out so lets try logging in again after 5 minutes.
+                    // TODO manage peer logins better.
+
                     if let Ok(t) = master.last_check.elapsed() {
                         if t.as_secs() > 300 {
                             state = Masterstate::LoginRequest;
                         }
                     }
                 }
-            }
-            Masterstate::Options => {
-                let options = hb::RPTOPacket::construct(
-                    MY_ID,
-                    "TS1_1=23526;TS1_2=1;TS1_3=235;TS2_1=840;TS2_2=844".to_string(),
-                );
-                println!("Sending options to master");
-                sock.send_to(&options, pip).unwrap();
-            }
-            _ => {
-                println!("Wrong master state");
+                Masterstate::Options => {
+                    let options = hb::RPTOPacket::construct(
+                        MY_ID,
+                        "TS1_1=23526;TS1_2=1;TS1_3=235;TS2_1=840;TS2_2=844".to_string(),
+                    );
+                    println!("Sending options to master");
+                    sock.send_to(&options, pip).unwrap();
+                }
+                _ => {
+                    println!("Wrong master state");
+                }
             }
         }
 
