@@ -421,7 +421,6 @@ fn main() {
                                     master.ip,
                                 )
                                 .unwrap();
-                                master.last_check = SystemTime::now();
                             }
                         }
                         Err(_) => {
@@ -534,6 +533,9 @@ fn main() {
             }
             hb::MSTP => {
                 println!("Received master pong");
+                if let Some(master) = mash.get_mut(&MY_ID) {
+                    master.last_check = SystemTime::now();
+                }
             }
             hb::MSTC => {
                 // We've received a disconnect request from the master.
