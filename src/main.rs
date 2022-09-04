@@ -434,9 +434,7 @@ fn main() {
                 },
                 Masterstate::WaitingPong => match master.last_check.elapsed() {
                     Ok(t) => {
-                        if t.as_secs() < 30 {
-                            state = Masterstate::Connected;
-                        } else {
+                        if t.as_secs() > 30 {
                             state = Masterstate::Logout;
                         }
                     }
@@ -543,6 +541,7 @@ fn main() {
                 if let Some(master) = mash.get_mut(&MY_ID) {
                     println!("Updated master last check time");
                     master.last_check = SystemTime::now();
+                    state = Masterstate::Connected;
                 }
             }
             hb::MSTC => {
