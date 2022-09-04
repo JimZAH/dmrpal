@@ -332,6 +332,8 @@ fn main() {
         55555,
     ));
 
+    let mut rx_buff = [0; 500];
+
     loop {
         // Print stats at least every 1 minute and check if a peer needs removing
         match stats_timer.elapsed() {
@@ -370,7 +372,6 @@ fn main() {
         }
 
         clock();
-        let mut rx_buff = [0; 500];
 
         let (_, src) = match sock.recv_from(&mut rx_buff) {
             Ok(rs) => {
@@ -415,7 +416,7 @@ fn main() {
                 if let Some(master) = mash.get_mut(&MY_ID) {
                     match master.last_check.elapsed() {
                         Ok(t) => {
-                            if t.as_secs() > 6 {
+                            if t.as_secs() > 15 {
                                 sock.send_to(
                                     &[hb::RPTPING, &master.id.to_be_bytes()].concat(),
                                     master.ip,
@@ -669,5 +670,6 @@ fn main() {
                 sleep(300);
             }
         }
+        rx_buff = [0; 500];
     }
 }
