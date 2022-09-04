@@ -422,6 +422,8 @@ fn main() {
                                     master.ip,
                                 )
                                 .unwrap();
+                            } else if t.as_secs() > 30{
+                                state = Masterstate::Logout;
                             }
                         }
                         Err(_) => {
