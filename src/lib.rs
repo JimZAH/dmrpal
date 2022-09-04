@@ -5,7 +5,7 @@ pub enum SystemState {
     Inuse(u32),
 }
 
-pub struct Systemstate{
+pub struct Systemstate {
     pub state: SystemState,
     pub time: time::SystemTime,
 }
