@@ -521,14 +521,6 @@ fn main() {
                     dvec.push(tx_buff);
                 }
             }
-            hb::MSTCL => {
-                println!("Todo!2");
-            }
-            hb::MSTACK => if mode == 2 {},
-            hb::MSTNAK => if mode == 2 {},
-            hb::MSTPONG => {
-                println!("Received master pong");
-            }
             hb::MSTN => {
                 println!("Todo!4a");
             }
@@ -553,14 +545,8 @@ fn main() {
                 sock.send_to(&[hb::RPTACK, &rx_buff[4..8], &randid].concat(), src)
                     .unwrap();
             }
-            hb::RPTPING => {
-                println!("Todo!6");
-            }
             hb::RPTCL => {
                 println!("Todo!7");
-            }
-            hb::RPTACK => {
-                println!("Received master ACK");
             }
             hb::RPTK => {
                 let mut peer = Peer::new();
@@ -662,9 +648,6 @@ fn main() {
             }
             hb::RPTS => {
                 println!("Todo!12");
-            }
-            hb::RPTSBKN => {
-                println!("Todo!13");
             }
             _ => {
                 sleep(300);
