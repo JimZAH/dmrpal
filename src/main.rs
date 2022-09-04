@@ -527,6 +527,7 @@ fn main() {
             hb::MSTP => {
                 println!("Received master pong");
                 if let Some(master) = mash.get_mut(&MY_ID) {
+                    println!("Updated master last check time");
                     master.last_check = SystemTime::now();
                 }
             }
