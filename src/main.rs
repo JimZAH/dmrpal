@@ -539,7 +539,6 @@ fn main() {
             hb::MSTP => {
                 println!("Received master pong");
                 if let Some(master) = mash.get_mut(&MY_ID) {
-                    println!("Updated master last check time");
                     master.last_check = SystemTime::now();
                     state = Masterstate::Connected;
                 }
@@ -554,8 +553,6 @@ fn main() {
                 let mut peer = Peer::new();
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
                 let randid = [0x0A, 0x7E, 0xD4, 0x98];
-                println!("Sending Ack: {}", src);
-                println!("Repeater Login Request: {:x?}", rx_buff);
                 sock.send_to(&[hb::RPTACK, &rx_buff[4..8], &randid].concat(), src)
                     .unwrap();
             }
@@ -650,7 +647,6 @@ fn main() {
                 let peer_options = hb::RPTOPacket::parse(rx_buff);
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
                 println!("Peer {}; has sent options:", peer.id);
-                println!("{:X?}", rx_buff);
                 match mash.get_mut(&peer.id) {
                     Some(p) => {
                         p.options = peer_options.options;
