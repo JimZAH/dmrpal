@@ -1,4 +1,5 @@
 use std::{dbg, thread, time};
+pub mod master;
 
 pub enum SystemState {
     Idle,
