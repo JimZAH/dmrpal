@@ -410,7 +410,7 @@ fn main() {
                 Masterstate::LoginRequest => {
                     sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
                     println!("sending password");
-                    sleep(95000);
+                    sleep(10000);
                 }
                 Masterstate::LoginPassword => {
                     sock.send_to(&myid.info(), pip).unwrap();
@@ -623,7 +623,6 @@ fn main() {
                     .unwrap();
             }
             hb::RPTA => {
-                println!("Todo!10");
                 state = match state {
                     Masterstate::LoginRequest => Masterstate::LoginPassword,
                     Masterstate::LoginPassword => {
