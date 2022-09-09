@@ -352,7 +352,7 @@ fn main() {
                     mash.retain(|_, p| //logins.contains(&k)
                 match p.last_check.elapsed(){
                 Ok(lc) => {
-                    if lc.as_secs() > 15 {
+                    if lc.as_secs() > 15 && p.id != MY_ID{
                         logins.remove(&p.id);
                         false
                     } else {
