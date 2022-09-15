@@ -262,6 +262,8 @@ fn main() {
 
     let mut state = Masterstate::Disconnected;
 
+    //let mut states: Vec<master::State> = Vec::new();
+
     // For now (lots of these for nows) we manually create the master peer.
     let mut master = Peer::new();
     master.callsign = "PHOENIXF".to_owned();
@@ -455,7 +457,7 @@ fn main() {
                 Masterstate::Options => {
                     let options = hb::RPTOPacket::construct(
                         MY_ID,
-                        "TS1_1=23526;TS1_2=1;TS1_3=235;TS2_1=840;TS2_2=844".to_string(),
+                        "TS1_1=23526;TS1_2=1;TS1_3=235;TS2_1=840;TS2_2=841;TS2_3=844;".to_string(),
                     );
                     println!("Sending options to master");
                     sock.send_to(&options, pip).unwrap();
@@ -475,6 +477,7 @@ fn main() {
                 d_counter += 1;
                 replay_counter = 0;
                 let _packet_data = &rx_buff[..53];
+
 
                 if d_counter > 32 {
                     d_counter = 0;
