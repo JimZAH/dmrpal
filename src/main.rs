@@ -258,11 +258,9 @@ fn main() {
     // Check the DB!
     let _db = db::init(SOFTWARE_VERSION);
 
-    let mut mode = 0;
-
     let mut state = Masterstate::Disconnected;
 
-    //let mut states: Vec<master::State> = Vec::new();
+    let mut states: HashMap<u32, master::State> = HashMap::new();
 
     // For now (lots of these for nows) we manually create the master peer.
     let mut master = Peer::new();
@@ -662,7 +660,7 @@ fn main() {
                 println!("Todo!12");
             }
             _ => {
-                sleep(300);
+                sleep(200);
             }
         }
         rx_buff = [0; hb::RX_BUFF_MAX];
