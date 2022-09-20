@@ -56,6 +56,7 @@ struct Peer {
 struct Talkgroup {
     expire: u64,
     id: u32,
+    la: SystemTime,
     routeable: Peertype,
     sl: u8,
     ua: bool,
@@ -189,6 +190,7 @@ impl Talkgroup {
         Self {
             expire: 0,
             id: 0,
+            la: SystemTime::now(),
             routeable: Peertype::Local,
             sl: 1,
             ua: false,
@@ -202,6 +204,12 @@ impl Talkgroup {
             return match self.time_stamp.elapsed() {
                 Ok(ts) => {
                     if ts.as_secs() > self.expire {
+                        // If the talkgroup has traffic, skip and try again when there's no traffic
+                        if let Ok(la) = self.la.elapsed() {
+                            if la.as_secs() < 15 {
+                                return true
+                            }
+                        };
                         println!("Removing TG: {}, From Peer: {}", self.id, self.id);
                         false
                     } else {
@@ -227,6 +235,7 @@ impl Talkgroup {
         Self {
             expire: exp,
             id: talk_group,
+            la: SystemTime::now(),
             routeable: Peertype::Local,
             sl: sl,
             ua: ua,
@@ -504,6 +513,7 @@ fn main() {
                                     tx_buff[11..15].copy_from_slice(&p.id.to_be_bytes());
                                 }
                                 sock.send_to(&tx_buff, p.ip).unwrap();
+                                tg.la = SystemTime::now();
                             } else if tg.ua {
                                 // Reset the time stamp for the UA talkgroup
                                 tg.time_stamp = SystemTime::now();
