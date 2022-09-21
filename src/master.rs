@@ -1,11 +1,11 @@
 use std::time::SystemTime;
 
-pub struct State{
+pub struct State {
     talkgroup: u32,
     timestamp: SystemTime,
 }
 
-impl State{
+impl State {
     fn default() -> Self {
         Self {
             talkgroup: 0,

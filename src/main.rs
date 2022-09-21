@@ -1,4 +1,4 @@
-use dmrpal::{debug, sleep, master, SystemState, Systemstate};
+use dmrpal::{debug, master, sleep, SystemState, Systemstate};
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::{io, str, string, time::SystemTime};
@@ -207,7 +207,7 @@ impl Talkgroup {
                         // If the talkgroup has traffic, skip and try again when there's no traffic
                         if let Ok(la) = self.la.elapsed() {
                             if la.as_secs() <= 5 {
-                                return true
+                                return true;
                             }
                         };
                         println!("Removing TG: {}, From Peer: {}", self.id, self.id);
@@ -484,7 +484,6 @@ fn main() {
                 d_counter += 1;
                 replay_counter = 0;
                 let _packet_data = &rx_buff[..53];
-
 
                 if d_counter > 32 {
                     d_counter = 0;
