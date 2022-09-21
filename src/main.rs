@@ -206,7 +206,7 @@ impl Talkgroup {
                     if ts.as_secs() > self.expire {
                         // If the talkgroup has traffic, skip and try again when there's no traffic
                         if let Ok(la) = self.la.elapsed() {
-                            if la.as_secs() < 15 {
+                            if la.as_secs() <= 5 {
                                 return true
                             }
                         };
