@@ -517,12 +517,15 @@ fn main() {
                             } else if tg.ua {
                                 // Reset the time stamp for the UA talkgroup
                                 tg.time_stamp = SystemTime::now();
+                            } else {
+                                println!("Not repeating to peer {:?} as reqs not met", p.id);
                             }
                         }
                         None => {
                             // If no talkgroup is found for the peer then we subscribe the peer to the talkgroup requested.
                             // If the peer does not request this talkgroup again in a 15 minute window the peer is auto-
                             // matically unsubscribed.
+                            println!("Not repeating to peer {:?} as TG not a member", p.id);
                             if p.ip == src && hbp.dst != USERACTIVATED_DISCONNECT_TG {
                                 p.talk_groups.insert(
                                     hbp.dst,
