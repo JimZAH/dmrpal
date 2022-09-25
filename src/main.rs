@@ -1,4 +1,4 @@
-use dmrpal::{debug, master, sleep, SystemState, Systemstate};
+use dmrpal::{debug, echo, master, sleep, SystemState, Systemstate};
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::{io, str, string, time::SystemTime};
@@ -268,6 +268,9 @@ fn main() {
     // Check the DB!
     let _db = db::init(SOFTWARE_VERSION);
 
+    // Queue for Echo frames
+    let mut echo_queue = echo::Queue::default();
+
     let mut state = Masterstate::Disconnected;
 
     let mut states: HashMap<u32, master::State> = HashMap::new();
@@ -514,9 +517,9 @@ fn main() {
                                 if p.id == MY_ID {
                                     tx_buff[11..15].copy_from_slice(&p.id.to_be_bytes());
                                 }
-                                match sock.send_to(&tx_buff, p.ip){
-                                    Ok(_) => {},
-                                    Err(em) => eprintln!("Error: {} sending to peer: {}", em, p.id)
+                                match sock.send_to(&tx_buff, p.ip) {
+                                    Ok(_) => {}
+                                    Err(em) => eprintln!("Error: {} sending to peer: {}", em, p.id),
                                 }
                                 tg.la = SystemTime::now();
                             } else if tg.ua {
@@ -546,7 +549,8 @@ fn main() {
                 }
 
                 if hbp.dst == 9990 && hbp.sl == 2 {
-                    dvec.push(tx_buff);
+                    let f = echo::Frame::create(tx_buff, src, hbp.si);
+                    f.commit(&mut echo_queue);
                 }
             }
             hb::MSTN => {
@@ -567,6 +571,7 @@ fn main() {
             hb::RPTL => {
                 let mut peer = Peer::new();
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
+                // Just send a predefined (random string). This needs to be random!
                 let randid = [0x0A, 0x7E, 0xD4, 0x98];
                 sock.send_to(&[hb::RPTACK, &rx_buff[4..8], &randid].concat(), src)
                     .unwrap();
