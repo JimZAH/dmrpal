@@ -512,10 +512,14 @@ fn main() {
                                 if p.id == MY_ID {
                                     tx_buff[11..15].copy_from_slice(&p.id.to_be_bytes());
                                 }
-                                sock.send_to(&tx_buff, p.ip).unwrap();
+                                match sock.send_to(&tx_buff, p.ip){
+                                    Ok(br) => println!("Sent bytes: {} to peer: {}", br, p.id),
+                                    Err(em) => eprintln!("Error: {} sending to peer: {}", em, p.id)
+                                }
                                 tg.la = SystemTime::now();
                             } else if tg.ua {
                                 // Reset the time stamp for the UA talkgroup
+                                println!("Not repeating to peer {:?} resetting UA time", p.id);
                                 tg.time_stamp = SystemTime::now();
                             } else {
                                 println!("Not repeating to peer {:?} as reqs not met", p.id);
