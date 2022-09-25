@@ -288,6 +288,8 @@ fn main() {
         (2351, Talkgroup::set(1, TgActivate::Static(2351))),
         (235, Talkgroup::set(1, TgActivate::Static(235))),
         (840, Talkgroup::set(2, TgActivate::Static(840))),
+        (841, Talkgroup::set(2, TgActivate::Static(841))),
+        (844, Talkgroup::set(2, TgActivate::Static(844))),
         (123, Talkgroup::set(1, TgActivate::Static(123))),
         (113, Talkgroup::set(1, TgActivate::Static(113))),
         (80, Talkgroup::set(1, TgActivate::Static(80))),
@@ -513,23 +515,19 @@ fn main() {
                                     tx_buff[11..15].copy_from_slice(&p.id.to_be_bytes());
                                 }
                                 match sock.send_to(&tx_buff, p.ip){
-                                    Ok(br) => println!("Sent bytes: {} to peer: {}", br, p.id),
+                                    Ok(_) => {},
                                     Err(em) => eprintln!("Error: {} sending to peer: {}", em, p.id)
                                 }
                                 tg.la = SystemTime::now();
                             } else if tg.ua {
                                 // Reset the time stamp for the UA talkgroup
-                                println!("Not repeating to peer {:?} resetting UA time", p.id);
                                 tg.time_stamp = SystemTime::now();
-                            } else {
-                                println!("Not repeating to peer {:?} as reqs not met", p.id);
                             }
                         }
                         None => {
                             // If no talkgroup is found for the peer then we subscribe the peer to the talkgroup requested.
                             // If the peer does not request this talkgroup again in a 15 minute window the peer is auto-
                             // matically unsubscribed.
-                            println!("Not repeating to peer {:?} as TG not a member", p.id);
                             if p.ip == src && hbp.dst != USERACTIVATED_DISCONNECT_TG {
                                 p.talk_groups.insert(
                                     hbp.dst,
@@ -555,7 +553,6 @@ fn main() {
                 println!("Todo!4a");
             }
             hb::MSTP => {
-                println!("Received master pong");
                 if let Some(master) = mash.get_mut(&MY_ID) {
                     master.last_check = SystemTime::now();
                     state = Masterstate::Connected;
@@ -636,7 +633,6 @@ fn main() {
                     None => continue,
                 };
 
-                println!("Sending Pong");
                 sock.send_to(&[hb::MSTPONG, &rx_buff[4..8]].concat(), peer.ip)
                     .unwrap();
             }
