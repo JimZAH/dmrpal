@@ -354,8 +354,8 @@ fn main() {
                     println!("Number of logins: {}", logins.len());
                     for (t, p) in &mash {
                         println!(
-                            "Peer details\n\nID: {}\nCall: {}\nTG active {:?}\nOptions: {}",
-                            t, p.callsign, p.talk_groups, p.options
+                            "Peer details\n\nID: {}\nCall: {}\nTG active {:?}\nOptions: {}\nIP: {}",
+                            t, p.callsign, p.talk_groups, p.options, p.ip
                         );
                     }
                     stats_timer = SystemTime::now();
