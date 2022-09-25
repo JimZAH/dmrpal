@@ -83,6 +83,7 @@ impl Peer {
                 (23526, Talkgroup::set(1, TgActivate::Ua(23526))),
                 (2351, Talkgroup::set(1, TgActivate::Static(2351))),
                 (235, Talkgroup::set(1, TgActivate::Static(235))),
+                (844, Talkgroup::set(2, TgActivate::Static(844))),
                 (840, Talkgroup::set(2, TgActivate::Static(840))),
                 (123, Talkgroup::set(1, TgActivate::Static(123))),
                 (113, Talkgroup::set(1, TgActivate::Static(113))),
