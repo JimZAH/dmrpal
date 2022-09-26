@@ -624,13 +624,14 @@ fn main() {
                     Ok(c) => c.to_owned(),
                     Err(_) => "Unknown".to_owned(),
                 };
+                peer.duplex = rx_buff[97] - 48;
                 peer.frequency = match str::from_utf8(&rx_buff[16..38]) {
                     Ok(c) => c.to_owned(),
                     Err(_) => "Unknown".to_owned(),
                 };
                 println!("Callsign is: {}", peer.callsign);
                 println!("Frequency is: {}", peer.frequency);
-                println!("Peer duplex type is: {}", rx_buff[97]);
+                println!("Peer duplex type is: {}", peer.duplex);
 
                 mash.insert(peer.id, peer);
 
