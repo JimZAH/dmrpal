@@ -27,23 +27,23 @@ impl Slot {
         match slot {
             Slots::One(tg) => {
                 if self.slot_1 == tg {
+                    self.slot_1_time = SystemTime::now();
                     return true;
                 } else if self.slot_1 != 0 && !self.unlock(slot) {
                     return false;
                 }
 
                 self.slot_1 = tg;
-                self.slot_1_time = SystemTime::now()
             }
             Slots::Two(tg) => {
                 if self.slot_2 == tg {
+                    self.slot_2_time = SystemTime::now();
                     return true;
                 } else if self.slot_2 != 0 && !self.unlock(slot) {
                     return false;
                 }
 
                 self.slot_2 = tg;
-                self.slot_1_time = SystemTime::now()
             }
         }
         true
