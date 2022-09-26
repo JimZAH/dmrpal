@@ -1,6 +1,7 @@
 use std::{dbg, thread, time};
 pub mod echo;
 pub mod master;
+pub mod slot;
 
 // Not yet used
 pub enum SystemState {

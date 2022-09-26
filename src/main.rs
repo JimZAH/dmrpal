@@ -1,4 +1,4 @@
-use dmrpal::{debug, echo, master, sleep, SystemState, Systemstate};
+use dmrpal::{debug, echo, master, sleep, slot, SystemState, Systemstate};
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::{io, str, string, time::SystemTime};
@@ -50,6 +50,7 @@ struct Peer {
     talk_groups: HashMap<u32, Talkgroup>,
     options: String,
     peer_type: Peertype,
+    slot: slot::Slot,
 }
 
 #[derive(Debug)]
@@ -98,6 +99,7 @@ impl Peer {
             ]),
             options: string::String::default(),
             peer_type: Peertype::Local,
+            slot: slot::Slot::init(),
         }
     }
 
@@ -513,6 +515,26 @@ fn main() {
                                         0,
                                     )
                             {
+                                // Check we can lock slot
+                                match hbp.sl {
+                                    1 => {
+                                        if !p.slot.lock(slot::Slots::One(hbp.si)) {
+                                            println!("Peer {} slot 1 is already locked", p.id);
+                                            continue;
+                                        }
+                                    }
+                                    2 => {
+                                        if !p.slot.lock(slot::Slots::Two(hbp.si)) {
+                                            println!("Peer {} slot 2 is already locked", p.id);
+                                            continue;
+                                        }
+                                    }
+                                    _ => {
+                                        eprintln!("Can't lock slot, invalid slot number!");
+                                        continue;
+                                    }
+                                }
+
                                 // If we are sending to the master we need to rewrite the source ID
                                 if p.id == MY_ID {
                                     tx_buff[11..15].copy_from_slice(&p.id.to_be_bytes());

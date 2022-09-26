@@ -13,10 +13,7 @@ pub struct Queue {
 
 impl Frame {
     pub fn create(data: [u8; 55], src: SocketAddr, stream: u32) -> Self {
-        Self {
-            data,
-            stream,
-        }
+        Self { data, stream }
     }
 
     pub fn commit(self, q: &mut Queue) {
