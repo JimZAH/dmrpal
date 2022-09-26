@@ -630,6 +630,7 @@ fn main() {
                 };
                 println!("Callsign is: {}", peer.callsign);
                 println!("Frequency is: {}", peer.frequency);
+                println!("Peer duplex type is: {}", rx_buff[97]);
 
                 mash.insert(peer.id, peer);
 
