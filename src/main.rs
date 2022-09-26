@@ -508,18 +508,36 @@ fn main() {
                                         0,
                                     )
                             {
-                                // Check we can lock slot
+                                // Check we can lock slot. If the peer is simplex check if either slot is locked
                                 match hbp.sl {
                                     1 => {
-                                        if !p.slot.lock(slot::Slots::One(hbp.dst)) {
-                                            println!("Peer {} slot 1 is already locked", p.id);
-                                            continue;
+                                        if p.duplex == 4 {
+                                            if !p.slot.lock(slot::Slots::One(hbp.dst))
+                                                || !p.slot.lock(slot::Slots::Two(hbp.dst))
+                                            {
+                                                println!("Peer {} slot is busy", p.id);
+                                                continue;
+                                            }
+                                        } else {
+                                            if !p.slot.lock(slot::Slots::One(hbp.dst)) {
+                                                println!("Peer {} slot 1 is already locked", p.id);
+                                                continue;
+                                            }
                                         }
                                     }
                                     2 => {
-                                        if !p.slot.lock(slot::Slots::Two(hbp.dst)) {
-                                            println!("Peer {} slot 2 is already locked", p.id);
-                                            continue;
+                                        if p.duplex == 4 {
+                                            if !p.slot.lock(slot::Slots::Two(hbp.dst))
+                                                || !p.slot.lock(slot::Slots::One(hbp.dst))
+                                            {
+                                                println!("Peer {} slot is busy", p.id);
+                                                continue;
+                                            }
+                                        } else {
+                                            if !p.slot.lock(slot::Slots::Two(hbp.dst)) {
+                                                println!("Peer {} slot 2 is already locked", p.id);
+                                                continue;
+                                            }
                                         }
                                     }
                                     _ => {
