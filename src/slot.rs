@@ -1,4 +1,4 @@
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 
 pub enum Slots {
     One(u32),
@@ -13,14 +13,6 @@ pub struct Slot {
 }
 
 impl Slot {
-    pub fn check(slot: Slots) -> bool {
-        match slot {
-            Slots::One(stream) => {}
-            Slots::Two(stream) => {}
-        }
-        false
-    }
-
     pub fn init() -> Self {
         let t = SystemTime::now();
         Self {
@@ -33,24 +25,24 @@ impl Slot {
 
     pub fn lock(&mut self, slot: Slots) -> bool {
         match slot {
-            Slots::One(stream) => {
-                if self.slot_1 == stream {
+            Slots::One(tg) => {
+                if self.slot_1 == tg {
                     return true;
-                } else if self.slot_1 != 0 && !self.unlock(slot){
+                } else if self.slot_1 != 0 && !self.unlock(slot) {
                     return false;
                 }
 
-                self.slot_1 = stream;
+                self.slot_1 = tg;
                 self.slot_1_time = SystemTime::now()
             }
-            Slots::Two(stream) => {
-                if self.slot_2 == stream {
+            Slots::Two(tg) => {
+                if self.slot_2 == tg {
                     return true;
-                } else if self.slot_2 != 0 && !self.unlock(slot){
+                } else if self.slot_2 != 0 && !self.unlock(slot) {
                     return false;
                 }
 
-                self.slot_2 = stream;
+                self.slot_2 = tg;
                 self.slot_1_time = SystemTime::now()
             }
         }
@@ -60,18 +52,18 @@ impl Slot {
     fn unlock(&mut self, slot: Slots) -> bool {
         match slot {
             Slots::One(_) => {
-                if let Ok(elp) = self.slot_1_time.elapsed(){
-                    if elp.as_millis() > 256 {
+                if let Ok(elp) = self.slot_1_time.elapsed() {
+                    if elp.as_secs() > 5 {
                         println!("Slot 1 unlocked");
-                        return true
+                        return true;
                     }
                 }
             }
             Slots::Two(_) => {
-                if let Ok(elp) = self.slot_2_time.elapsed(){
-                    if elp.as_millis() > 256 {
+                if let Ok(elp) = self.slot_2_time.elapsed() {
+                    if elp.as_secs() > 5 {
                         println!("Slot 2 unlocked");
-                        return true
+                        return true;
                     }
                 }
             }

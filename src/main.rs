@@ -247,11 +247,6 @@ impl Talkgroup {
     }
 }
 
-// If we've not heard from a peer in a while remove them
-fn clock() {
-    //TODO
-}
-
 fn echo(sock: &std::net::UdpSocket, dst: std::net::SocketAddr, data: &Vec<[u8; 55]>) {
     for d in data {
         sock.send_to(d, dst).unwrap();
@@ -390,8 +385,6 @@ fn main() {
             Err(_) => {}
         }
 
-        clock();
-
         let (_, src) = match sock.recv_from(&mut rx_buff) {
             Ok(rs) => {
                 payload_counter += 1;
@@ -518,13 +511,13 @@ fn main() {
                                 // Check we can lock slot
                                 match hbp.sl {
                                     1 => {
-                                        if !p.slot.lock(slot::Slots::One(hbp.si)) {
+                                        if !p.slot.lock(slot::Slots::One(hbp.dst)) {
                                             println!("Peer {} slot 1 is already locked", p.id);
                                             continue;
                                         }
                                     }
                                     2 => {
-                                        if !p.slot.lock(slot::Slots::Two(hbp.si)) {
+                                        if !p.slot.lock(slot::Slots::Two(hbp.dst)) {
                                             println!("Peer {} slot 2 is already locked", p.id);
                                             continue;
                                         }
