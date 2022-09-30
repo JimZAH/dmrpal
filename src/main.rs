@@ -654,8 +654,12 @@ fn main() {
                 println!("Peer duplex type is: {}", peer.duplex);
 
                 // To help set the correct offsets print info received in bytes
-                println!("Peer details raw: {rx_buff:X?}");
-
+                println!("Peer details raw");
+                for (a,b) in rx_buff.iter().enumerate(){
+                    print!("{a}:{b:X}");
+                }
+                println!();
+                
                 mash.insert(peer.id, peer);
 
                 sock.send_to(&[hb::RPTACK, &rx_buff[4..8]].concat(), src)

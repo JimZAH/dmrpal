@@ -192,7 +192,7 @@ impl RPTLPacket {
     pub fn info(&self) -> [u8; 302] {
         // This is for testing only and we must write a way to extract config, this is for POC
         let mut b = [0x20; 302];
-        let rx_f = b"434400000";
+        let rx_f = b"434000";
         b[0] = b'R';
         b[1] = b'P';
         b[2] = b'T';
@@ -204,9 +204,9 @@ impl RPTLPacket {
         b[11] = b'W';
         b[12] = b'V';
         b[13] = b'V';
-        b[16..20].copy_from_slice(&self.id.to_be_bytes());
-        b[20..29].copy_from_slice(rx_f);
-        b[29..38].copy_from_slice(rx_f);
+        //b[16..20].copy_from_slice(&self.id.to_be_bytes());
+        b[16..rx_f.len()].copy_from_slice(rx_f);
+        b[16+rx_f.len()..rx_f.len()].copy_from_slice(rx_f);
         b[38..40].copy_from_slice(b"49");
         b[40..42].copy_from_slice(b"49");
         b[42..51].copy_from_slice(b"+50.42432");
