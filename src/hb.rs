@@ -222,6 +222,10 @@ impl RPTLPacket {
         b
     }
 
+    pub fn info_parse(&self, buf: [u8; RX_BUFF_MAX]) {
+        println!("Peer duplex type: {}", buf[97])
+    }
+
     pub fn ping(&self) -> [u8; 8] {
         let mut b = [0; 8];
         b[0] = b'R';
