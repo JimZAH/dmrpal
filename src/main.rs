@@ -48,8 +48,10 @@ struct Peer {
     height: u16,
     ip: std::net::SocketAddr,
     talk_groups: HashMap<u32, Talkgroup>,
+    tx_bytes: usize,
     options: String,
     peer_type: Peertype,
+    rx_bytes: usize,
     slot: slot::Slot,
 }
 
@@ -91,8 +93,10 @@ impl Peer {
                 (2, Talkgroup::set(1, TgActivate::Static(2))),
                 (1, Talkgroup::set(1, TgActivate::Static(1))),
             ]),
+            tx_bytes: 0,
             options: string::String::default(),
             peer_type: Peertype::Local,
+            rx_bytes: 0,
             slot: slot::Slot::init(),
         }
     }
@@ -350,8 +354,8 @@ fn main() {
                     println!("Number of logins: {}", logins.len());
                     for (t, p) in &mash {
                         println!(
-                            "Peer details\n\nID: {}\nCall: {}\nTG active {:?}\nOptions: {}\nIP: {}",
-                            t, p.callsign, p.talk_groups, p.options, p.ip
+                            "Peer details\n\nID: {}\nCall: {}\nRX: {} TX: {}\nIP: {}",
+                            t, p.callsign, p.rx_bytes, p.tx_bytes, p.ip
                         );
                     }
                     stats_timer = SystemTime::now();
@@ -379,7 +383,7 @@ fn main() {
             Err(_) => {}
         }
 
-        let (_, src) = match sock.recv_from(&mut rx_buff) {
+        let (rx_byte, src) = match sock.recv_from(&mut rx_buff) {
             Ok(rs) => {
                 payload_counter += 1;
                 rs
@@ -545,13 +549,17 @@ fn main() {
                                     tx_buff[11..15].copy_from_slice(&p.id.to_be_bytes());
                                 }
                                 match sock.send_to(&tx_buff, p.ip) {
-                                    Ok(_) => {}
+                                    Ok(s) => p.rx_bytes += s,
                                     Err(em) => eprintln!("Error: {} sending to peer: {}", em, p.id),
                                 }
                                 tg.la = SystemTime::now();
                             } else if tg.ua {
                                 // Reset the time stamp for the UA talkgroup
                                 tg.time_stamp = SystemTime::now();
+                            }
+
+                            if p.ip == src {
+                                p.tx_bytes += rx_byte;
                             }
                         }
                         None => {
