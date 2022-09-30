@@ -192,7 +192,7 @@ impl RPTLPacket {
     pub fn info(&self) -> [u8; 302] {
         // This is for testing only and we must write a way to extract config, this is for POC
         let mut b = [0x20; 302];
-        let rx_f = b"434000";
+        let rx_f = b"434525";
         b[0] = b'R';
         b[1] = b'P';
         b[2] = b'T';

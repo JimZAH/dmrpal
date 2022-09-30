@@ -656,7 +656,7 @@ fn main() {
                 // To help set the correct offsets print info received in bytes
                 println!("Peer details raw");
                 for (a, b) in rx_buff.iter().enumerate() {
-                    print!("{a}:{b:X}");
+                    print!("{a}:{b:X}  ");
                 }
                 println!();
 
