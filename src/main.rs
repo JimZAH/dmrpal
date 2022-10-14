@@ -176,6 +176,33 @@ impl Peer {
         state
     }
 
+    fn options(&mut self) {
+        for opts in self.options.split(';') {
+            if opts.len() < 3 {
+                continue;
+            }
+            match &opts[..3] {
+                "TS1" | "TS2" => match opts.chars().nth(2) {
+                    Some(s) => {
+                        let slot = s as u8 - 48;
+                        let mut tg: u32 = 0;
+                        for i in opts[5..].bytes() {
+                            if i > 47 && i < 58 {
+                                tg = tg * 10;
+                                tg = tg + i as u32 - 48;
+                            }
+                        }
+                        self.talk_groups
+                            .insert(tg, Talkgroup::set(slot, TgActivate::Static(tg)));
+                        println!("OPTIONS {}, Added {} {}", self.id, slot, tg);
+                    }
+                    None => continue,
+                },
+                _ => continue,
+            }
+        }
+    }
+
     // Set the peer ID
     fn pid(&mut self, buff: &[u8; 4]) {
         self.id = ((buff[0] as u32) << 24)
@@ -712,6 +739,7 @@ fn main() {
                 match mash.get_mut(&peer.id) {
                     Some(p) => {
                         p.options = peer_options.options;
+                        p.options();
                         sock.send_to(&[hb::RPTACK, &rx_buff[4..8]].concat(), src)
                             .unwrap();
                     }
