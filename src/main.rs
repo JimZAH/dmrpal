@@ -313,7 +313,7 @@ fn main() {
 
     let mut state = Masterstate::Disconnected;
 
-    let mut states: HashMap<u32, master::State> = HashMap::new();
+    let mut states: HashMap<u32, master::State> = HashMap::new()
 
     // For now (lots of these for nows) we manually create the master peer.
     let mut master = Peer::new();
@@ -456,7 +456,6 @@ fn main() {
         }
 
         // check the state of master connection
-
         if let Some(master) = mash.get_mut(&MY_ID) {
             match state {
                 Masterstate::Disable => {}
@@ -498,13 +497,13 @@ fn main() {
                 Masterstate::Logout => {
                     // The master logged us out so lets try logging in again after 5 minutes.
                     // TODO manage peer logins better.
-
                     if let Ok(t) = master.last_check.elapsed() {
                         if t.as_secs() > 300 {
                             state = Masterstate::LoginRequest;
                         }
                     }
                 }
+                
                 Masterstate::Options => {
                     let options = hb::RPTOPacket::construct(
                         MY_ID,

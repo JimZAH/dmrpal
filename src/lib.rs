@@ -1,4 +1,5 @@
 use std::{dbg, thread, time};
+
 pub mod echo;
 pub mod master;
 pub mod slot;
@@ -16,6 +17,7 @@ pub struct Systemstate {
 }
 
 // Will need a better debug approach but this works for now
+
 pub fn debug(text: &str) {
     dbg!(text);
 }
