@@ -53,6 +53,7 @@ struct Peer {
     peer_type: Peertype,
     rx_bytes: usize,
     slot: slot::Slot,
+    tg_expire: u64,
 }
 
 #[derive(Debug)]
@@ -82,22 +83,23 @@ impl Peer {
             ip: std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
             talk_groups: HashMap::from([
                 (0, Talkgroup::default()),
-                (31337, Talkgroup::set(2, TgActivate::Static(31337))),
-                (2351, Talkgroup::set(1, TgActivate::Static(2351))),
-                (235, Talkgroup::set(1, TgActivate::Static(235))),
-                (844, Talkgroup::set(2, TgActivate::Static(844))),
-                (840, Talkgroup::set(2, TgActivate::Static(840))),
-                (123, Talkgroup::set(1, TgActivate::Static(123))),
-                (113, Talkgroup::set(1, TgActivate::Static(113))),
-                (3, Talkgroup::set(1, TgActivate::Static(3))),
-                (2, Talkgroup::set(1, TgActivate::Static(2))),
-                (1, Talkgroup::set(1, TgActivate::Static(1))),
+                (31337, Talkgroup::set(2, TgActivate::Static(31337), None)),
+                (2351, Talkgroup::set(1, TgActivate::Static(2351), None)),
+                (235, Talkgroup::set(1, TgActivate::Static(235), None)),
+                (844, Talkgroup::set(2, TgActivate::Static(844), None)),
+                (840, Talkgroup::set(2, TgActivate::Static(840), None)),
+                (123, Talkgroup::set(1, TgActivate::Static(123), None)),
+                (113, Talkgroup::set(1, TgActivate::Static(113), None)),
+                (3, Talkgroup::set(1, TgActivate::Static(3), None)),
+                (2, Talkgroup::set(1, TgActivate::Static(2), None)),
+                (1, Talkgroup::set(1, TgActivate::Static(1), None)),
             ]),
             tx_bytes: 0,
             options: string::String::default(),
             peer_type: Peertype::Local,
             rx_bytes: 0,
             slot: slot::Slot::init(),
+            tg_expire: 0,
         }
     }
 
@@ -193,11 +195,12 @@ impl Peer {
                             }
                         }
                         self.talk_groups
-                            .insert(tg, Talkgroup::set(slot, TgActivate::Static(tg)));
+                            .insert(tg, Talkgroup::set(slot, TgActivate::Static(tg), None));
                         println!("OPTIONS {}, Added {} {}", self.id, slot, tg);
                     }
                     None => continue,
                 },
+                "UAT" => {},
                 _ => continue,
             }
         }
@@ -254,19 +257,25 @@ impl Talkgroup {
     }
 
     // Set a talk group to a peer
-    fn set(sl: u8, tg: TgActivate) -> Self {
-        let (ua, talk_group, exp) = match tg {
+    fn set(sl: u8, tg: TgActivate, exp: Option<u64>) -> Self {
+        let (ua, talk_group, expire) = match tg {
             TgActivate::Static(u) => (false, u, 0),
-            TgActivate::Ua(u) => (true, u, 900),
+            TgActivate::Ua(u) => {
+                let e: u64 = match exp {
+                    Some(v) => v,
+                    None => 900,
+                };
+                (true, u, e)
+            },
         };
 
         Self {
-            expire: exp,
+            expire,
             id: talk_group,
             la: SystemTime::now(),
             routeable: Peertype::Local,
-            sl: sl,
-            ua: ua,
+            sl,
+            ua,
             time_stamp: SystemTime::now(),
         }
     }
@@ -309,22 +318,22 @@ fn main() {
     master.peer_type = Peertype::All;
     master.software = "IPSC2".to_owned();
     master.talk_groups = HashMap::from([
-        (23526, Talkgroup::set(1, TgActivate::Static(23526))),
-        (2351, Talkgroup::set(1, TgActivate::Static(2351))),
-        (235, Talkgroup::set(1, TgActivate::Static(235))),
-        (840, Talkgroup::set(2, TgActivate::Static(840))),
-        (841, Talkgroup::set(2, TgActivate::Static(841))),
-        (844, Talkgroup::set(2, TgActivate::Static(844))),
-        (123, Talkgroup::set(1, TgActivate::Static(123))),
-        (113, Talkgroup::set(1, TgActivate::Static(113))),
-        (80, Talkgroup::set(1, TgActivate::Static(80))),
-        (81, Talkgroup::set(1, TgActivate::Static(81))),
-        (82, Talkgroup::set(1, TgActivate::Static(82))),
-        (83, Talkgroup::set(1, TgActivate::Static(83))),
-        (84, Talkgroup::set(1, TgActivate::Static(84))),
-        (3, Talkgroup::set(1, TgActivate::Static(3))),
-        (2, Talkgroup::set(1, TgActivate::Static(2))),
-        (1, Talkgroup::set(1, TgActivate::Static(1))),
+        (23526, Talkgroup::set(1, TgActivate::Static(23526), None)),
+        (2351, Talkgroup::set(1, TgActivate::Static(2351), None)),
+        (235, Talkgroup::set(1, TgActivate::Static(235), None)),
+        (840, Talkgroup::set(2, TgActivate::Static(840), None)),
+        (841, Talkgroup::set(2, TgActivate::Static(841), None)),
+        (844, Talkgroup::set(2, TgActivate::Static(844), None)),
+        (123, Talkgroup::set(1, TgActivate::Static(123), None)),
+        (113, Talkgroup::set(1, TgActivate::Static(113), None)),
+        (80, Talkgroup::set(1, TgActivate::Static(80), None)),
+        (81, Talkgroup::set(1, TgActivate::Static(81), None)),
+        (82, Talkgroup::set(1, TgActivate::Static(82), None)),
+        (83, Talkgroup::set(1, TgActivate::Static(83), None)),
+        (84, Talkgroup::set(1, TgActivate::Static(84), None)),
+        (3, Talkgroup::set(1, TgActivate::Static(3), None)),
+        (2, Talkgroup::set(1, TgActivate::Static(2), None)),
+        (1, Talkgroup::set(1, TgActivate::Static(1), None)),
     ]);
     master.options = "TS1_1=23526".to_owned();
 
@@ -596,7 +605,7 @@ fn main() {
                             if p.ip == src && hbp.dst != USERACTIVATED_DISCONNECT_TG {
                                 p.talk_groups.insert(
                                     hbp.dst,
-                                    Talkgroup::set(hbp.sl, TgActivate::Ua(hbp.dst)),
+                                    Talkgroup::set(hbp.sl, TgActivate::Ua(hbp.dst), Some(p.tg_expire)),
                                 );
                                 println!(
                                     "Added TG: {} to peer: id-{} call-{} ",
