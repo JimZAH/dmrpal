@@ -200,7 +200,16 @@ impl Peer {
                     }
                     None => continue,
                 },
-                "UAT" => {},
+                "UAT" => {
+                    let mut t: u64 = 0;
+                    for i in opts[4..].bytes() {
+                        if i > 47 && i < 58 {
+                            t = t * 10;
+                            t = t + i as u64 - 48;
+                        }
+                    }
+                    self.tg_expire = t;
+                }
                 _ => continue,
             }
         }
@@ -266,7 +275,7 @@ impl Talkgroup {
                     None => 900,
                 };
                 (true, u, e)
-            },
+            }
         };
 
         Self {
@@ -605,7 +614,11 @@ fn main() {
                             if p.ip == src && hbp.dst != USERACTIVATED_DISCONNECT_TG {
                                 p.talk_groups.insert(
                                     hbp.dst,
-                                    Talkgroup::set(hbp.sl, TgActivate::Ua(hbp.dst), Some(p.tg_expire)),
+                                    Talkgroup::set(
+                                        hbp.sl,
+                                        TgActivate::Ua(hbp.dst),
+                                        Some(p.tg_expire),
+                                    ),
                                 );
                                 println!(
                                     "Added TG: {} to peer: id-{} call-{} ",
