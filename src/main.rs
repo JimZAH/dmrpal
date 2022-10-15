@@ -313,7 +313,7 @@ fn main() {
 
     let mut state = Masterstate::Disconnected;
 
-    let mut states: HashMap<u32, master::State> = HashMap::new()
+    let mut states: HashMap<u32, master::State> = HashMap::new();
 
     // For now (lots of these for nows) we manually create the master peer.
     let mut master = Peer::new();
