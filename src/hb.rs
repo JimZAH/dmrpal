@@ -22,6 +22,8 @@ pub const RPTO: &[u8] = b"RPTO";
 pub const RPTS: &[u8] = b"RPTS";
 pub const RPTSBKN: &[u8] = b"RPTSBKN";
 
+pub const RX_BUFF_MAX: usize = 512;
+
 // DMRD paclet structure
 pub struct DMRDPacket {
     pub seq: u8,
@@ -112,7 +114,7 @@ impl DMRDPacket {
 
     // Parse DMRD packet
     // TODO: Data type 4 bits
-    pub fn parse(buf: [u8; 500]) -> Self {
+    pub fn parse(buf: [u8; RX_BUFF_MAX]) -> Self {
         let mut c_type = 0;
         let mut f_type = 0;
         let mut slot = 1;
@@ -165,7 +167,8 @@ impl RPTLPacket {
         b
     }
 
-    pub fn password_response(&self, buf: [u8; 500]) -> [u8; 40] {
+
+    pub fn password_response(&self, buf: [u8; RX_BUFF_MAX]) -> [u8; 40] {
         let password = b"PASSWORD";
         let mut bf = [0; 40];
         let mut pbuf = [0; 12];
@@ -190,7 +193,7 @@ impl RPTLPacket {
     pub fn info(&self) -> [u8; 302] {
         // This is for testing only and we must write a way to extract config, this is for POC
         let mut b = [0x20; 302];
-        let rx_f = b"434400000";
+        let rx_f = b"434525";
         b[0] = b'R';
         b[1] = b'P';
         b[2] = b'T';
@@ -202,9 +205,8 @@ impl RPTLPacket {
         b[11] = b'W';
         b[12] = b'V';
         b[13] = b'V';
-        b[16..20].copy_from_slice(&self.id.to_be_bytes());
-        b[20..29].copy_from_slice(rx_f);
-        b[29..38].copy_from_slice(rx_f);
+        //b[16..20].copy_from_slice(&self.id.to_be_bytes());
+        b[16..rx_f.len() + 16].copy_from_slice(rx_f);
         b[38..40].copy_from_slice(b"49");
         b[40..42].copy_from_slice(b"49");
         b[42..51].copy_from_slice(b"+50.42432");
@@ -220,6 +222,9 @@ impl RPTLPacket {
         b
     }
 
+    pub fn info_parse(&self, buf: [u8; RX_BUFF_MAX]) {
+        println!("Peer duplex type: {}", buf[97])
+    }
     pub fn ping(&self) -> [u8; 8] {
         let mut b = [0; 8];
         b[0] = b'R';
@@ -232,8 +237,8 @@ impl RPTLPacket {
 }
 
 impl RPTOPacket {
-    pub fn construct(id: u32, options: String) -> [u8; 500] {
-        let mut b = [0; 500];
+    pub fn construct(id: u32, options: String) -> [u8; RX_BUFF_MAX] {
+        let mut b = [0; RX_BUFF_MAX];
         let options_size = options.len();
         b[0] = b'R';
         b[1] = b'P';
@@ -244,7 +249,7 @@ impl RPTOPacket {
         b
     }
 
-    pub fn parse(buf: [u8; 500]) -> Self {
+    pub fn parse(buf: [u8; RX_BUFF_MAX]) -> Self {
         Self {
             id: ((buf[5] as u32) << 16) | ((buf[6] as u32) << 8) | (buf[7] as u32),
             options: String::from_utf8_lossy(&buf[8..]).to_string(),
