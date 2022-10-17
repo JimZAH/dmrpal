@@ -3,7 +3,7 @@ use crate::{
     talkgroups::{Talkgroup, TgActivate},
 };
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     net::{IpAddr, Ipv4Addr},
     string,
     time::SystemTime,
