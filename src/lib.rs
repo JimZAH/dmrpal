@@ -16,8 +16,19 @@ pub struct Systemstate {
     pub time: time::SystemTime,
 }
 
-// Will need a better debug approach but this works for now
+// Convert utf8 to u32
+pub fn utint(num: &str) -> u32 {
+    match num.parse::<u32>() {
+        Ok(v) => {
+            v
+        },
+        Err(_) => {
+            0
+        },
+    }
+}
 
+// Will need a better debug approach but this works for now
 pub fn debug(text: &str) {
     dbg!(text);
 }
