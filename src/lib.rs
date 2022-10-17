@@ -2,7 +2,9 @@ use std::{dbg, thread, time};
 
 pub mod echo;
 pub mod master;
+pub mod peers;
 pub mod slot;
+pub mod talkgroups;
 
 // Not yet used
 pub enum SystemState {
@@ -19,12 +21,8 @@ pub struct Systemstate {
 // Convert utf8 to u32
 pub fn utint(num: &str) -> u32 {
     match num.parse::<u32>() {
-        Ok(v) => {
-            v
-        },
-        Err(_) => {
-            0
-        },
+        Ok(v) => v,
+        Err(_) => 0,
     }
 }
 

@@ -167,7 +167,6 @@ impl RPTLPacket {
         b
     }
 
-
     pub fn password_response(&self, buf: [u8; RX_BUFF_MAX]) -> [u8; 40] {
         let password = b"PASSWORD";
         let mut bf = [0; 40];
