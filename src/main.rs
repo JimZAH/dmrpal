@@ -519,9 +519,9 @@ fn main() {
                             for i in &p.echo.echos{
                                 sock.send_to(&i.data, p.ip).unwrap();
                             }
+                            p.echo = echo::Queue::default();
                         }
                     }
-                    p.echo = echo::Queue::default();
                    }
                 }
             }
