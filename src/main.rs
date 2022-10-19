@@ -365,7 +365,8 @@ fn main() {
                             }
                         }
                     }
-                    if hbp.dst == 9990 && hbp.sl == 2 && p.id != MY_ID{
+                    if hbp.dst == 9990 && hbp.sl == 2 && p.id == hbp.rpt && p.id != MY_ID{
+                        println!("Adding items to peer: {}", p.id);
                         p.echo(<[u8; 55]>::try_from(&rx_buff[..55]).unwrap(), hbp.si);
                     }
                 }
