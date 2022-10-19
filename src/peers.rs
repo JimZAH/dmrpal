@@ -69,7 +69,7 @@ impl Peer {
             peer_type: Peertype::Local,
             rx_bytes: 0,
             slot: slot::Slot::init(),
-            tg_expire: 0,
+            tg_expire: 15,
         }
     }
 
