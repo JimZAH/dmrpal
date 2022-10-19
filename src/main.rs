@@ -28,12 +28,6 @@ enum Masterstate {
     Logout,
 }
 
-fn echo(sock: &std::net::UdpSocket, dst: std::net::SocketAddr, data: &Vec<[u8; 55]>) {
-    for d in data {
-        sock.send_to(d, dst).unwrap();
-    }
-}
-
 // Need to better handle close down gracefully but this will do for now.
 fn closedown() {
     println!("Shutting Down, GoodBye!\n");
@@ -45,9 +39,6 @@ fn main() {
 
     // Check the DB!
     let _db = db::init(SOFTWARE_VERSION);
-
-    // Queue for Echo frames
-    let mut echo_queue = echo::Queue::default();
 
     let mut state = Masterstate::Disconnected;
 
@@ -104,8 +95,6 @@ fn main() {
 
     sock.set_nonblocking(true).unwrap();
 
-    let mut dvec: Vec<[u8; 55]> = Vec::new();
-    let mut replay_counter = 0;
     let mut d_counter = 31;
     let mut payload_counter: usize = 0;
     let mut stats_timer = SystemTime::now();
@@ -179,18 +168,6 @@ fn main() {
             }
         };
 
-        // If we have a message play it back
-        if !dvec.is_empty() && replay_counter > 1 {
-            replay_counter = 0;
-            echo(&sock, src, &dvec);
-            println!("echo");
-            dvec.clear();
-        }
-
-        if !dvec.is_empty() {
-            replay_counter += 1;
-        }
-
         // check the state of master connection
         if let Some(master) = mash.get_mut(&MY_ID) {
             match state {
@@ -261,7 +238,6 @@ fn main() {
             hb::DMRD => {
                 let hbp = hb::DMRDPacket::parse(rx_buff);
                 d_counter += 1;
-                replay_counter = 0;
                 let _packet_data = &rx_buff[..53];
 
                 if d_counter > 32 {
