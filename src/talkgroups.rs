@@ -36,7 +36,7 @@ impl Talkgroup {
         if self.ua {
             return match self.time_stamp.elapsed() {
                 Ok(ts) => {
-                    if ts.as_secs() > self.expire {
+                    if ts.as_secs() > self.expire * 60 {
                         // If the talkgroup has traffic, skip and try again when there's no traffic
                         if let Ok(la) = self.la.elapsed() {
                             if la.as_secs() <= 5 {
