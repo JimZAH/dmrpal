@@ -99,12 +99,10 @@ impl Peer {
                     if !self.slot.lock(slot::Slots::One(dst))
                         || !self.slot.lock(slot::Slots::Two(dst))
                     {
-                        println!("Peer {} slot is busy", self.id);
                         return true;
                     }
                 } else {
                     if !self.slot.lock(slot::Slots::One(dst)) {
-                        println!("Peer {} slot 1 is already locked", self.id);
                         return true;
                     }
                 }
@@ -114,12 +112,10 @@ impl Peer {
                     if !self.slot.lock(slot::Slots::Two(dst))
                         || !self.slot.lock(slot::Slots::One(dst))
                     {
-                        println!("Peer {} slot is busy", self.id);
                         return true;
                     }
                 } else {
                     if !self.slot.lock(slot::Slots::Two(dst)) {
-                        println!("Peer {} slot 2 is already locked", self.id);
                         return true;
                     }
                 }
