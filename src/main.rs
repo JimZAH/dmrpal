@@ -476,6 +476,7 @@ fn main() {
                 sleep(200);
                 /* If a peer has an echo Queue to play then process it in quiet time. The queue is only played after 5 seconds has passed since the user recorded the message.
                    Only when the queue has been played do we then drop the queue by replacing with the default.
+                   This isn't really an efficient way of doing this but it works for now, we can always improve later.
                     */
                 for p in mash.values_mut(){
                    if !p.echo.has_items(){
