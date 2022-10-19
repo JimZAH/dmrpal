@@ -55,7 +55,6 @@ impl Slot {
             Slots::One(_) => {
                 if let Ok(elp) = self.slot_1_time.elapsed() {
                     if elp.as_secs() > 5 {
-                        println!("Slot 1 unlocked");
                         return true;
                     }
                 }
@@ -63,7 +62,6 @@ impl Slot {
             Slots::Two(_) => {
                 if let Ok(elp) = self.slot_2_time.elapsed() {
                     if elp.as_secs() > 5 {
-                        println!("Slot 2 unlocked");
                         return true;
                     }
                 }

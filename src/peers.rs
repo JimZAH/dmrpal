@@ -1,4 +1,5 @@
 use crate::{
+    echo,
     slot,
     talkgroups::{Talkgroup, TgActivate},
 };
@@ -20,6 +21,7 @@ pub struct Peer {
     pub id: u32,
     pub callsign: String,
     pub duplex: u8,
+    pub echo: echo::Queue,
     pub frequency: String,
     pub software: String,
     pub latitude: f32,
@@ -43,6 +45,7 @@ impl Peer {
             id: 0,
             callsign: string::String::default(),
             duplex: 0,
+            echo: echo::Queue::default(),
             frequency: string::String::default(),
             software: string::String::default(),
             latitude: 0.0,
@@ -82,6 +85,47 @@ impl Peer {
             }
         }
         true
+    }
+
+    pub fn echo(&mut self, data: [u8; 55], stream: u32) {
+        let frame = echo::Frame::create(data,stream);
+        self.echo.submit(frame);
+    }
+
+    pub fn lock(&mut self, dst: u32, sl: u8) -> bool {
+        match sl {
+            1 => {
+                if self.duplex == 4 {
+                    if !self.slot.lock(slot::Slots::One(dst))
+                        || !self.slot.lock(slot::Slots::Two(dst))
+                    {
+                        return true;
+                    }
+                } else {
+                    if !self.slot.lock(slot::Slots::One(dst)) {
+                        return true;
+                    }
+                }
+            }
+            2 => {
+                if self.duplex == 4 {
+                    if !self.slot.lock(slot::Slots::Two(dst))
+                        || !self.slot.lock(slot::Slots::One(dst))
+                    {
+                        return true;
+                    }
+                } else {
+                    if !self.slot.lock(slot::Slots::Two(dst)) {
+                        return true;
+                    }
+                }
+            }
+            _ => {
+                eprintln!("Can't lock slot, invalid slot number!");
+                return true;
+            }
+        }
+        false
     }
 
     pub fn options(&mut self) {
