@@ -1,5 +1,5 @@
 use crate::{
-    echo::{self, Queue},
+    echo,
     slot,
     talkgroups::{Talkgroup, TgActivate},
 };
@@ -90,6 +90,46 @@ impl Peer {
     pub fn echo(&mut self, data: [u8; 55], stream: u32) {
         let frame = echo::Frame::create(data,stream);
         self.echo.submit(frame);
+    }
+
+    pub fn lock(&mut self, dst: u32, sl: u8) -> bool {
+        match sl {
+            1 => {
+                if self.duplex == 4 {
+                    if !self.slot.lock(slot::Slots::One(dst))
+                        || !self.slot.lock(slot::Slots::Two(dst))
+                    {
+                        println!("Peer {} slot is busy", self.id);
+                        return true;
+                    }
+                } else {
+                    if !self.slot.lock(slot::Slots::One(dst)) {
+                        println!("Peer {} slot 1 is already locked", self.id);
+                        return true;
+                    }
+                }
+            }
+            2 => {
+                if self.duplex == 4 {
+                    if !self.slot.lock(slot::Slots::Two(dst))
+                        || !self.slot.lock(slot::Slots::One(dst))
+                    {
+                        println!("Peer {} slot is busy", self.id);
+                        return true;
+                    }
+                } else {
+                    if !self.slot.lock(slot::Slots::Two(dst)) {
+                        println!("Peer {} slot 2 is already locked", self.id);
+                        return true;
+                    }
+                }
+            }
+            _ => {
+                eprintln!("Can't lock slot, invalid slot number!");
+                return true;
+            }
+        }
+        false
     }
 
     pub fn options(&mut self) {

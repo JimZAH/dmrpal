@@ -276,6 +276,10 @@ fn main() {
 
                 // Repeat to peers who are members of the same talkgroup and peer type.
                 for p in mash.values_mut() {
+                    // Check we can lock slot. If the peer is simplex check if either slot is locked
+                    if p.lock(hbp.dst, hbp.sl){
+                        continue;
+                    }
                     match p.talk_groups.get_mut(&hbp.dst) {
                         Some(tg) => {
                             if tg.sl == hbp.sl
@@ -286,44 +290,6 @@ fn main() {
                                         0,
                                     )
                             {
-                                // Check we can lock slot. If the peer is simplex check if either slot is locked
-                                match hbp.sl {
-                                    1 => {
-                                        if p.duplex == 4 {
-                                            if !p.slot.lock(slot::Slots::One(hbp.dst))
-                                                || !p.slot.lock(slot::Slots::Two(hbp.dst))
-                                            {
-                                                println!("Peer {} slot is busy", p.id);
-                                                continue;
-                                            }
-                                        } else {
-                                            if !p.slot.lock(slot::Slots::One(hbp.dst)) {
-                                                println!("Peer {} slot 1 is already locked", p.id);
-                                                continue;
-                                            }
-                                        }
-                                    }
-                                    2 => {
-                                        if p.duplex == 4 {
-                                            if !p.slot.lock(slot::Slots::Two(hbp.dst))
-                                                || !p.slot.lock(slot::Slots::One(hbp.dst))
-                                            {
-                                                println!("Peer {} slot is busy", p.id);
-                                                continue;
-                                            }
-                                        } else {
-                                            if !p.slot.lock(slot::Slots::Two(hbp.dst)) {
-                                                println!("Peer {} slot 2 is already locked", p.id);
-                                                continue;
-                                            }
-                                        }
-                                    }
-                                    _ => {
-                                        eprintln!("Can't lock slot, invalid slot number!");
-                                        continue;
-                                    }
-                                }
-
                                 // If we are sending to the master we need to rewrite the source ID
                                 if p.id == MY_ID {
                                     tx_buff[11..15].copy_from_slice(&p.id.to_be_bytes());
@@ -513,9 +479,11 @@ fn main() {
                     */
                 for p in mash.values_mut(){
                    if !p.echo.has_items(){
-                    println!("Peer: {}, has echo items", p.id);
                     if let Ok(t) = p.echo.la_time.elapsed(){
                         if t.as_secs() >= 5 {
+                            if p.lock(p.id, 2){
+                                continue;
+                            }
                             println!("Sending echo to peer: {}", p.id);
                             for i in &p.echo.echos{
                                 sock.send_to(&i.data, p.ip).unwrap();
