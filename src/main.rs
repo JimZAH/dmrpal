@@ -365,7 +365,7 @@ fn main() {
                             }
                         }
                     }
-                    if hbp.dst == 9990 && hbp.sl == 2 {
+                    if hbp.dst == 9990 && hbp.sl == 2 && p.id != MY_ID{
                         p.echo(<[u8; 55]>::try_from(&rx_buff[..55]).unwrap(), hbp.si);
                     }
                 }
