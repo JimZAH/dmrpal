@@ -365,12 +365,11 @@ fn main() {
                             }
                         }
                     }
+                    if hbp.dst == 9990 && hbp.sl == 2 {
+                        p.echo(<[u8; 55]>::try_from(&rx_buff[..55]).unwrap(), hbp.si);
+                    }
                 }
 
-                if hbp.dst == 9990 && hbp.sl == 2 {
-                    let f = echo::Frame::create(tx_buff, src, hbp.si);
-                    f.commit(&mut echo_queue);
-                }
             }
             hb::MSTN => {
                 println!("Todo!4a");
@@ -508,6 +507,23 @@ fn main() {
             }
             _ => {
                 sleep(200);
+                /* If a peer has an echo Queue to play then process it in quiet time. The queue is only played after 5 seconds has passed since the user recorded the message.
+                   Only when the queue has been played do we then drop the queue by replacing with the default.
+                    */
+                for p in mash.values_mut(){
+                   if !p.echo.has_items(){
+                    println!("Peer: {}, has echo items", p.id);
+                    if let Ok(t) = p.echo.la_time.elapsed(){
+                        if t.as_secs() >= 5 {
+                            println!("Sending echo to peer: {}", p.id);
+                            for i in &p.echo.echos{
+                                sock.send_to(&i.data, p.ip).unwrap();
+                            }
+                        }
+                    }
+                    p.echo = echo::Queue::default();
+                   }
+                }
             }
         }
         rx_buff = [0; hb::RX_BUFF_MAX];

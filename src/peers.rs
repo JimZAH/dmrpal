@@ -1,4 +1,5 @@
 use crate::{
+    echo::{self, Queue},
     slot,
     talkgroups::{Talkgroup, TgActivate},
 };
@@ -20,6 +21,7 @@ pub struct Peer {
     pub id: u32,
     pub callsign: String,
     pub duplex: u8,
+    pub echo: echo::Queue,
     pub frequency: String,
     pub software: String,
     pub latitude: f32,
@@ -43,6 +45,7 @@ impl Peer {
             id: 0,
             callsign: string::String::default(),
             duplex: 0,
+            echo: echo::Queue::default(),
             frequency: string::String::default(),
             software: string::String::default(),
             latitude: 0.0,
@@ -82,6 +85,11 @@ impl Peer {
             }
         }
         true
+    }
+
+    pub fn echo(&mut self, data: [u8; 55], stream: u32) {
+        let frame = echo::Frame::create(data,stream);
+        self.echo.submit(frame);
     }
 
     pub fn options(&mut self) {
