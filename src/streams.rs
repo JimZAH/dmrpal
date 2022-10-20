@@ -38,7 +38,6 @@ impl Streams {
 
     pub fn stream(&mut self, id: u32) {
         if let Some(v) = self.current_streams.get_mut(&id) {
-            println!("Stream: {} is already known", v.id);
             Stream::update_end(v);
             return;
         }
