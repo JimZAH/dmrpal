@@ -4,6 +4,7 @@ pub mod echo;
 pub mod master;
 pub mod peers;
 pub mod slot;
+pub mod streams;
 pub mod talkgroups;
 
 // Not yet used
