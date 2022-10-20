@@ -129,6 +129,8 @@ fn main() {
                             "Peer details\n\nID: {}\nCall: {}\nRX: {} TX: {}\nIP: {}",
                             t, p.callsign, p.rx_bytes, p.tx_bytes, p.ip
                         );
+
+                        println!("Total Number of streams processed: {}", streams.total);
                     }
                     stats_timer = SystemTime::now();
                     mash.retain(|_, p| //logins.contains(&k)
@@ -249,9 +251,6 @@ fn main() {
                         "DEBUG: rf_src: {}, dest: {}, packet seq: {:x?} slot: {}, ctype: {}, stream id: {} payload count: {}",
                         hbp.src, hbp.dst, hbp.seq, hbp.sl, hbp.ct, hbp.si, payload_counter
                     );
-                    for (s, v) in &streams.current_streams {
-                        println!("Stream: {}, Start: {:?}", s, v.start_time);
-                    }
                 }
                 let mut tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
                 //let tx_buff = hbp.construct();
