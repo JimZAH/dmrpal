@@ -1,7 +1,7 @@
 use dmrpal::{
     debug, echo,
     peers::{Peer, Peertype},
-    sleep, slot,
+    sleep, slot, streams,
     talkgroups::{Talkgroup, TgActivate},
 };
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
@@ -41,6 +41,8 @@ fn main() {
     let _db = db::init(SOFTWARE_VERSION);
 
     let mut state = Masterstate::Disconnected;
+
+    let mut streams = streams::Streams::init();
 
     // For now (lots of these for nows) we manually create the master peer.
     let mut master = Peer::new();
@@ -237,6 +239,7 @@ fn main() {
             }
             hb::DMRD => {
                 let hbp = hb::DMRDPacket::parse(rx_buff);
+                streams.stream(hbp.si);
                 d_counter += 1;
                 let _packet_data = &rx_buff[..53];
 
@@ -246,6 +249,9 @@ fn main() {
                         "DEBUG: rf_src: {}, dest: {}, packet seq: {:x?} slot: {}, ctype: {}, stream id: {} payload count: {}",
                         hbp.src, hbp.dst, hbp.seq, hbp.sl, hbp.ct, hbp.si, payload_counter
                     );
+                    for (s, v) in &streams.current_streams {
+                        println!("Stream: {}, Start: {:?}", s, v.start_time);
+                    }
                 }
                 let mut tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
                 //let tx_buff = hbp.construct();
@@ -253,7 +259,7 @@ fn main() {
                 // Repeat to peers who are members of the same talkgroup and peer type.
                 for p in mash.values_mut() {
                     // Check we can lock slot. If the peer is simplex check if either slot is locked
-                    if p.lock(hbp.dst, hbp.sl){
+                    if p.lock(hbp.dst, hbp.sl) {
                         continue;
                     }
                     match p.talk_groups.get_mut(&hbp.dst) {
@@ -307,12 +313,11 @@ fn main() {
                             }
                         }
                     }
-                    if hbp.dst == 9990 && hbp.sl == 2 && p.id == hbp.rpt && p.id != MY_ID{
+                    if hbp.dst == 9990 && hbp.sl == 2 && p.id == hbp.rpt && p.id != MY_ID {
                         println!("Adding items to peer: {}", p.id);
                         p.echo(<[u8; 55]>::try_from(&rx_buff[..55]).unwrap(), hbp.si);
                     }
                 }
-
             }
             hb::MSTN => {
                 println!("Todo!4a");
@@ -451,25 +456,27 @@ fn main() {
             _ => {
                 sleep(200);
                 /* If a peer has an echo Queue to play then process it in quiet time. The queue is only played after 5 seconds has passed since the user recorded the message.
-                   Only when the queue has been played do we then drop the queue by replacing with the default.
-                   This isn't really an efficient way of doing this but it works for now, we can always improve later.
-                    */
-                for p in mash.values_mut(){
-                   if !p.echo.has_items(){
-                    if let Ok(t) = p.echo.la_time.elapsed(){
-                        if t.as_secs() >= 5 {
-                            if p.lock(p.id, 2){
-                                continue;
+                Only when the queue has been played do we then drop the queue by replacing with the default.
+                This isn't really an efficient way of doing this but it works for now, we can always improve later.
+                 */
+                for p in mash.values_mut() {
+                    if !p.echo.has_items() {
+                        if let Ok(t) = p.echo.la_time.elapsed() {
+                            if t.as_secs() >= 5 {
+                                if p.lock(p.id, 2) {
+                                    continue;
+                                }
+                                println!("Sending echo to peer: {}", p.id);
+                                for i in &p.echo.echos {
+                                    sock.send_to(&i.data, p.ip).unwrap();
+                                }
+                                p.echo = echo::Queue::default();
                             }
-                            println!("Sending echo to peer: {}", p.id);
-                            for i in &p.echo.echos{
-                                sock.send_to(&i.data, p.ip).unwrap();
-                            }
-                            p.echo = echo::Queue::default();
                         }
                     }
-                   }
                 }
+
+                streams.check();
             }
         }
         rx_buff = [0; hb::RX_BUFF_MAX];
