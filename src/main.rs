@@ -241,7 +241,10 @@ fn main() {
             }
             hb::DMRD => {
                 let hbp = hb::DMRDPacket::parse(rx_buff);
-                streams.stream(hbp.si);
+                if streams.stream(hbp.si) {
+                    println!("Stream: {}, Timeout", hbp.si);
+                    continue;
+                }
                 d_counter += 1;
 
                 if d_counter > 32 {

@@ -41,14 +41,24 @@ impl Streams {
         }
     }
 
-    pub fn stream(&mut self, id: u32) {
+    pub fn stream(&mut self, id: u32) -> bool {
         if let Some(v) = self.current_streams.get_mut(&id) {
-            Stream::update_end(v);
-            return;
+            match v.start_time.elapsed() {
+                Ok(t) => {
+                    if t.as_secs() >= 300 {
+                        v.time_out = true;
+                        return true;
+                    }
+                    Stream::update_end(v);
+                    return false;
+                }
+                Err(_) => return false,
+            }
         }
 
         self.total += 1;
         self.current_streams.insert(id, Stream::start(id));
+        false
     }
 
     // Check if we have any redundant streams
