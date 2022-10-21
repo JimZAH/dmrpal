@@ -25,11 +25,11 @@ impl Queue {
     pub fn default() -> Self {
         Self {
             echos: Vec::new(),
-            la_time: SystemTime::now()
+            la_time: SystemTime::now(),
         }
     }
 
-    pub fn has_items(&self) -> bool{
+    pub fn has_items(&self) -> bool {
         self.echos.is_empty()
     }
 

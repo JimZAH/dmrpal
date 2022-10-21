@@ -1,6 +1,5 @@
 use crate::{
-    echo,
-    slot,
+    echo, slot,
     talkgroups::{Talkgroup, TgActivate},
 };
 use std::{
@@ -88,7 +87,7 @@ impl Peer {
     }
 
     pub fn echo(&mut self, data: [u8; 55], stream: u32) {
-        let frame = echo::Frame::create(data,stream);
+        let frame = echo::Frame::create(data, stream);
         self.echo.submit(frame);
     }
 
