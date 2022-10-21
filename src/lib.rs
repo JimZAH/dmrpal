@@ -30,7 +30,7 @@ pub fn utint(num: &str) -> u32 {
 #[macro_export]
 macro_rules! dprint {
     ($verbose:expr;$mid:expr;$($arg:tt)*) => {{
-    if $mid >= $verbose {
+    if $verbose >= $mid {
         let mut prefix = "";
         match $verbose{
             1 => print!("CRITICAL: "),
