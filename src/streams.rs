@@ -5,7 +5,7 @@ use std::{collections::hash_map::HashMap, time::SystemTime};
 */
 
 // Store stream data, maybe we also store talk group info in future
-#[derive(Eq, Hash, PartialEq)]
+
 pub struct Stream {
     pub id: u32,
     pub end_time: SystemTime,
