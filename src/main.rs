@@ -243,7 +243,6 @@ fn main() {
                 let hbp = hb::DMRDPacket::parse(rx_buff);
                 streams.stream(hbp.si);
                 d_counter += 1;
-                let _packet_data = &rx_buff[..53];
 
                 if d_counter > 32 {
                     d_counter = 0;
@@ -253,7 +252,6 @@ fn main() {
                     );
                 }
                 let mut tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
-                //let tx_buff = hbp.construct();
 
                 // Repeat to peers who are members of the same talkgroup and peer type.
                 for p in mash.values_mut() {
