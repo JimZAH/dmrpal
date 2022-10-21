@@ -1,4 +1,4 @@
-use std::{dbg, thread, time};
+use std::{thread, time};
 
 pub mod echo;
 pub mod master;
@@ -27,9 +27,23 @@ pub fn utint(num: &str) -> u32 {
     }
 }
 
-// Will need a better debug approach but this works for now
-pub fn debug(text: &str) {
-    dbg!(text);
+#[macro_export]
+macro_rules! dprint {
+    ($verbose:expr;$mid:expr;$($arg:tt)*) => {{
+    if $mid >= $verbose {
+        let mut prefix = "";
+        match $verbose{
+            1 => print!("CRITICAL: "),
+            2 => print!("WARNING: "),
+            3 => print!("NOTICE: "),
+            4 => print!("INFO: "),
+            _=> {
+                print!("DEBUG: ");
+            }
+        };
+        println!($($arg)*);
+    }
+    }};
 }
 
 // Pause for X microseconds
