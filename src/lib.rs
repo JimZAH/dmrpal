@@ -31,14 +31,13 @@ pub fn utint(num: &str) -> u32 {
 macro_rules! dprint {
     ($verbose:expr;$mid:expr;$($arg:tt)*) => {{
     if $verbose >= $mid {
-        match $verbose{
+        match $mid{
             1 => print!("CRITICAL: "),
             2 => print!("WARNING: "),
             3 => print!("NOTICE: "),
             4 => print!("INFO: "),
-            _=> {
-                print!("{}",$verbose);
-            }
+            10 => print!("DEBUG: "),
+            _=> {},
         };
         println!($($arg)*);
     }
