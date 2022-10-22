@@ -36,7 +36,7 @@ fn closedown() {
 fn main() {
     let arg: Vec<String> = args().collect();
     let mut verbose: u8 = 5;
-    if arg.len() >= 1 {
+    if arg.len() > 1 {
         match arg[1].as_ref() {
             "--verbose" | "-v" => match arg[2].parse::<u8>() {
                 Ok(v) => verbose = v,
