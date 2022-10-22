@@ -6,7 +6,7 @@ use dmrpal::{
 };
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
-use std::{io, str, time::SystemTime};
+use std::{env::args, io, str, time::SystemTime};
 
 mod db;
 mod hb;
@@ -15,7 +15,6 @@ const SOFTWARE_VERSION: u64 = 1;
 const USERACTIVATED_DISCONNECT_TG: u32 = 4000;
 const MY_ID: u32 = 235045402;
 const REMOTE_PEER: &str = "78, 129, 135, 43";
-const VERBOSE: u8 = 5;
 
 #[derive(Debug, PartialEq)]
 enum Masterstate {
@@ -31,12 +30,22 @@ enum Masterstate {
 
 // Need to better handle close down gracefully but this will do for now.
 fn closedown() {
-    dprint!(VERBOSE;3;"Shutting Down, GoodBye!\n");
     std::process::exit(0);
 }
 
 fn main() {
-    dprint!(VERBOSE;4;"Loading...");
+    let arg: Vec<String> = args().collect();
+    let mut verbose: u8 = 5;
+    if arg.len() >= 1 {
+        match arg[1].as_ref() {
+            "--verbose" | "-v" => match arg[2].parse::<u8>() {
+                Ok(v) => verbose = v,
+                Err(_) => dprint!(verbose;2;"Unable to set verbosity, using default"),
+            },
+            _ => {}
+        }
+    }
+    dprint!(verbose;4;"Loading...");
 
     // Check the DB!
     let _db = db::init(SOFTWARE_VERSION);
@@ -91,7 +100,7 @@ fn main() {
     let sock = match UdpSocket::bind("0.0.0.0:55555") {
         Ok(s) => s,
         Err(e) => {
-            dprint!(VERBOSE;1;"There was an error binding: {}", e);
+            dprint!(verbose;1;"There was an error binding: {}", e);
             std::process::exit(-1);
         }
     };
@@ -124,14 +133,14 @@ fn main() {
         match stats_timer.elapsed() {
             Ok(t) => {
                 if t.as_secs() >= 60 {
-                    dprint!(VERBOSE;4;"Number of logins: {}", logins.len());
+                    dprint!(verbose;4;"Number of logins: {}", logins.len());
                     for (t, p) in &mash {
-                        dprint!(VERBOSE;4;
+                        dprint!(verbose;4;
                             "Peer details\n\nID: {}\nCall: {}\nRX: {} TX: {}\nIP: {}",
                             t, p.callsign, p.rx_bytes, p.tx_bytes, p.ip
                         );
 
-                        dprint!(VERBOSE;4;"Total Number of streams processed: {}", streams.total);
+                        dprint!(verbose;4;"Total Number of streams processed: {}", streams.total);
                     }
                     stats_timer = SystemTime::now();
                     mash.retain(|_, p| //logins.contains(&k)
@@ -149,7 +158,7 @@ fn main() {
                     }
                 },
                 Err(e) => {
-                    dprint!(VERBOSE;2;"Error parsing last check time: {}",e);
+                    dprint!(verbose;2;"Error parsing last check time: {}",e);
                     false
                 }
                 });
@@ -168,7 +177,7 @@ fn main() {
                 std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
             ),
             Err(e) => {
-                dprint!(VERBOSE;1;"There was an error listening: {}", e);
+                dprint!(verbose;1;"There was an error listening: {}", e);
                 std::process::exit(-1);
             }
         };
@@ -179,12 +188,12 @@ fn main() {
                 Masterstate::Disable => {}
                 Masterstate::LoginRequest => {
                     sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
-                    dprint!(VERBOSE;4;"sending password");
+                    dprint!(verbose;4;"sending password");
                     sleep(10000);
                 }
                 Masterstate::LoginPassword => {
                     sock.send_to(&myid.info(), pip).unwrap();
-                    dprint!(VERBOSE;4;"sending info");
+                    dprint!(verbose;4;"sending info");
                     sleep(95000);
                 }
                 Masterstate::Connected => match master.last_check.elapsed() {
@@ -199,7 +208,7 @@ fn main() {
                         }
                     }
                     Err(_) => {
-                        dprint!(VERBOSE;2;"Error passing master last check time");
+                        dprint!(verbose;2;"Error passing master last check time");
                     }
                 },
                 Masterstate::WaitingPong => match master.last_check.elapsed() {
@@ -209,7 +218,7 @@ fn main() {
                         }
                     }
                     Err(_) => {
-                        dprint!(VERBOSE;2;"Error passing master last check time");
+                        dprint!(verbose;2;"Error passing master last check time");
                     }
                 },
                 Masterstate::Logout => {
@@ -227,30 +236,30 @@ fn main() {
                         MY_ID,
                         "TS1_1=23526;TS1_2=1;TS1_3=235;TS2_1=840;TS2_2=841;TS2_3=844;".to_string(),
                     );
-                    dprint!(VERBOSE;4;"Sending options to master");
+                    dprint!(verbose;4;"Sending options to master");
                     sock.send_to(&options, pip).unwrap();
                 }
                 _ => {
-                    dprint!(VERBOSE;2;"Wrong master state");
+                    dprint!(verbose;2;"Wrong master state");
                 }
             }
         }
 
         match &rx_buff[..4] {
             hb::DMRA => {
-                dprint!(VERBOSE;2;"Todo! 1");
+                dprint!(verbose;2;"Todo! 1");
             }
             hb::DMRD => {
                 let hbp = hb::DMRDPacket::parse(rx_buff);
                 if streams.stream(hbp.si) {
-                    dprint!(VERBOSE;3;"Stream: {}, Timeout", hbp.si);
+                    dprint!(verbose;3;"Stream: {}, Timeout", hbp.si);
                     continue;
                 }
                 d_counter += 1;
 
                 if d_counter > 32 {
                     d_counter = 0;
-                    dprint!(VERBOSE;10;
+                    dprint!(verbose;10;
                         "rf_src: {}, dest: {}, packet seq: {:x?} slot: {}, ctype: {}, stream id: {} payload count: {}",
                         hbp.src, hbp.dst, hbp.seq, hbp.sl, hbp.ct, hbp.si, payload_counter
                     );
@@ -280,7 +289,7 @@ fn main() {
                                 match sock.send_to(&tx_buff, p.ip) {
                                     Ok(s) => p.rx_bytes += s,
                                     Err(em) => {
-                                        dprint!(VERBOSE;2;"Error: {} sending to peer: {}", em, p.id)
+                                        dprint!(verbose;2;"Error: {} sending to peer: {}", em, p.id)
                                     }
                                 }
                                 tg.la = SystemTime::now();
@@ -306,7 +315,7 @@ fn main() {
                                         Some(p.tg_expire),
                                     ),
                                 );
-                                dprint!(VERBOSE;4;
+                                dprint!(verbose;4;
                                     "Added TG: {} to peer: id-{} call-{} ",
                                     &hbp.dst, &p.id, &p.callsign
                                 );
@@ -317,13 +326,13 @@ fn main() {
                         }
                     }
                     if hbp.dst == 9990 && hbp.sl == 2 && p.id == hbp.rpt && p.id != MY_ID {
-                        dprint!(VERBOSE;10;"Adding items to peer: {}", p.id);
+                        dprint!(verbose;10;"Adding items to peer: {}", p.id);
                         p.echo(<[u8; 55]>::try_from(&rx_buff[..55]).unwrap(), hbp.si);
                     }
                 }
             }
             hb::MSTN => {
-                dprint!(VERBOSE;2;"Todo!4a");
+                dprint!(verbose;2;"Todo!4a");
             }
             hb::MSTP => {
                 if let Some(master) = mash.get_mut(&MY_ID) {
@@ -346,18 +355,18 @@ fn main() {
                     .unwrap();
             }
             hb::RPTCL => {
-                dprint!(VERBOSE;2;"Todo!7");
+                dprint!(verbose;2;"Todo!7");
             }
             hb::RPTK => {
                 let mut peer = Peer::new();
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
                 if !peer.acl() {
-                    dprint!(VERBOSE;3;"Peer ID: {} is blocked", peer.id);
+                    dprint!(verbose;3;"Peer ID: {} is blocked", peer.id);
                     sock.send_to(&[hb::MSTNAK, &rx_buff[4..8]].concat(), src)
                         .unwrap();
                     continue;
                 }
-                dprint!(VERBOSE;4;"Peer: {} has logged in", peer.id);
+                dprint!(verbose;4;"Peer: {} has logged in", peer.id);
 
                 if logins.insert(peer.id) {
                     sock.send_to(&[hb::RPTACK, &rx_buff[4..8]].concat(), src)
@@ -370,7 +379,7 @@ fn main() {
                 peer.ip = src;
 
                 if !logins.contains(&peer.id) {
-                    dprint!(VERBOSE;4;"Unknown peer sent info {}", peer.id);
+                    dprint!(verbose;4;"Unknown peer sent info {}", peer.id);
                     continue;
                 }
 
@@ -383,16 +392,16 @@ fn main() {
                     Ok(c) => c.to_owned(),
                     Err(_) => "Unknown".to_owned(),
                 };
-                dprint!(VERBOSE;4;"Callsign is: {}", peer.callsign);
-                dprint!(VERBOSE;4;"Frequency is: {}", peer.frequency);
-                dprint!(VERBOSE;4;"Peer duplex type is: {}", peer.duplex);
+                dprint!(verbose;4;"Callsign is: {}", peer.callsign);
+                dprint!(verbose;4;"Frequency is: {}", peer.frequency);
+                dprint!(verbose;4;"Peer duplex type is: {}", peer.duplex);
 
                 // To help set the correct offsets print info received in bytes
-                dprint!(VERBOSE;10;"Peer details raw");
+                dprint!(verbose;10;"Peer details raw");
                 for (a, b) in rx_buff.iter().enumerate() {
                     print!("{a}:{b:X}  ");
                 }
-                dprint!(VERBOSE;10;"\n");
+                dprint!(verbose;10;"\n");
 
                 mash.insert(peer.id, peer);
 
@@ -432,8 +441,8 @@ fn main() {
                     Masterstate::Logout => Masterstate::Logout,
                     Masterstate::Connected | Masterstate::Options => Masterstate::Connected,
                     _ => {
-                        dprint!(VERBOSE;3;"RPTACK RECEIVED: UNKNOWN Masterstate");
-                        dprint!(VERBOSE;3;"Master state: {:?}", state);
+                        dprint!(verbose;3;"RPTACK RECEIVED: UNKNOWN Masterstate");
+                        dprint!(verbose;3;"Master state: {:?}", state);
                         Masterstate::Disable
                     }
                 }
@@ -442,7 +451,7 @@ fn main() {
                 let mut peer = Peer::new();
                 let peer_options = hb::RPTOPacket::parse(rx_buff);
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
-                dprint!(VERBOSE;4;"Peer {}; has sent options:", peer.id);
+                dprint!(verbose;4;"Peer {}; has sent options:", peer.id);
                 match mash.get_mut(&peer.id) {
                     Some(p) => {
                         p.options = peer_options.options;
@@ -454,7 +463,7 @@ fn main() {
                 };
             }
             hb::RPTS => {
-                dprint!(VERBOSE;2;"Todo!12");
+                dprint!(verbose;2;"Todo!12");
             }
             _ => {
                 sleep(200);
@@ -469,7 +478,7 @@ fn main() {
                                 if p.lock(p.id, 2) {
                                     continue;
                                 }
-                                dprint!(VERBOSE;10;"Sending echo to peer: {}", p.id);
+                                dprint!(verbose;10;"Sending echo to peer: {}", p.id);
                                 for i in &p.echo.echos {
                                     sock.send_to(&i.data, p.ip).unwrap();
                                 }
