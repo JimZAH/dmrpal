@@ -19,14 +19,7 @@ pub struct Systemstate {
     pub time: time::SystemTime,
 }
 
-// Convert utf8 to u32
-pub fn utint(num: &str) -> u32 {
-    match num.parse::<u32>() {
-        Ok(v) => v,
-        Err(_) => 0,
-    }
-}
-
+/* Log printing macro */
 #[macro_export]
 macro_rules! dprint {
     ($verbose:expr;$mid:expr;$($arg:tt)*) => {{
@@ -44,7 +37,7 @@ macro_rules! dprint {
     }};
 }
 
-// Pause for X microseconds
+/* Pause for X microseconds */
 pub fn sleep(time: u64) {
     thread::sleep(time::Duration::from_micros(time));
 }

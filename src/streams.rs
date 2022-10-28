@@ -4,7 +4,7 @@ use std::{collections::hash_map::HashMap, time::SystemTime};
     Store DMR stream ID data, this can be used for timeouts and stats.
 */
 
-// Store stream data, maybe we also store talk group info in future
+/* Store stream data, maybe we also store talk group info in future */
 
 pub struct Stream {
     pub id: u32,
@@ -41,6 +41,7 @@ impl Streams {
         }
     }
 
+    /* Add a stream via ID, if already exists check to see if timed out */
     pub fn stream(&mut self, id: u32) -> bool {
         if let Some(v) = self.current_streams.get_mut(&id) {
             match v.start_time.elapsed() {
@@ -61,7 +62,7 @@ impl Streams {
         false
     }
 
-    // Check if we have any redundant streams
+    /* Check if we have any redundant streams */
     pub fn check(&mut self) {
         self.current_streams
             .retain(|_, v| match v.end_time.elapsed() {
