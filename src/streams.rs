@@ -49,7 +49,7 @@ impl Streams {
                         v.time_out = true;
                         return true;
                     }
-                    Stream::update_end(v);
+                    v.update_end();
                     return false;
                 }
                 Err(_) => return false,
