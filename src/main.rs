@@ -326,7 +326,7 @@ fn main() {
                         }
                     }
                     if hbp.dst == 9990 && hbp.sl == 2 && p.id == hbp.rpt && p.id != MY_ID {
-                        dprint!(verbose;10;"Adding items to peer: {}", p.id);
+                        dprint!(verbose;10;"{:X?}", &rx_buff[..55]);
                         p.echo(<[u8; 55]>::try_from(&rx_buff[..55]).unwrap(), hbp.si);
                     }
                 }
@@ -480,6 +480,7 @@ fn main() {
                                 }
                                 dprint!(verbose;10;"Sending echo to peer: {}", p.id);
                                 for i in &p.echo.echos {
+                                    dprint!(verbose;10;"{:X?}", &i.data);
                                     sock.send_to(&i.data, p.ip).unwrap();
                                 }
                                 p.echo = echo::Queue::default();
