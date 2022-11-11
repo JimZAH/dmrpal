@@ -1,7 +1,7 @@
 use dmrpal::{
     dprint, echo,
     peers::{Peer, Peertype},
-    sleep, streams,
+    sleep, streams, system,
     talkgroups::{Talkgroup, TgActivate},
 };
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
@@ -52,6 +52,8 @@ fn main() {
     let mut state: Masterstate;
 
     let mut streams = streams::Streams::init();
+
+    let mut system = system::System::init();
 
     // For now (lots of these for nows) we manually create the master peer.
     let mut master = Peer::new();
@@ -188,6 +190,7 @@ fn main() {
                 Masterstate::LoginRequest => {
                     sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
                     dprint!(verbose;4;"sending password");
+                    system.master_reconnects += 1;
                     sleep(10000);
                 }
                 Masterstate::LoginPassword => {
