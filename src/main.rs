@@ -345,7 +345,7 @@ fn main() {
             hb::RPTL => {
                 let mut peer = Peer::new();
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
-                // Just send a predefined (random string). This needs to be random!
+                // Just send a predefined (random string). This should be random!
                 let randid = [0x0A, 0x7E, 0xD4, 0x98];
                 sock.send_to(&[hb::RPTACK, &rx_buff[4..8], &randid].concat(), src)
                     .unwrap();
