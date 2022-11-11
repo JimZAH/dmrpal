@@ -19,7 +19,6 @@ const REMOTE_PEER: &str = "78, 129, 135, 43";
 #[derive(Debug, PartialEq)]
 enum Masterstate {
     Disable,
-    Disconnected,
     LoginRequest,
     LoginPassword,
     Options,
@@ -50,7 +49,7 @@ fn main() {
     // Check the DB!
     let _db = db::init(SOFTWARE_VERSION);
 
-    let mut state = Masterstate::Disconnected;
+    let mut state: Masterstate;
 
     let mut streams = streams::Streams::init();
 
@@ -238,9 +237,6 @@ fn main() {
                     );
                     dprint!(verbose;4;"Sending options to master");
                     sock.send_to(&options, pip).unwrap();
-                }
-                _ => {
-                    dprint!(verbose;2;"Wrong master state");
                 }
             }
         }
