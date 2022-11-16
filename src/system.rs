@@ -21,8 +21,7 @@ impl Config {
     pub fn load() -> Self {
         if let Ok(file) = fs::read("dmrpal.toml") {
             let file_data = str::from_utf8(&file).unwrap();
-            let conf: Config = toml::from_str(file_data).unwrap();
-            return conf;
+            toml::from_str(file_data).unwrap()
         } else {
             panic!("Configuration file not found!");
         }
