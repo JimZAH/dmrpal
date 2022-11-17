@@ -263,6 +263,7 @@ fn main() {
                 for p in mash.values_mut() {
                     // Check we can lock slot. If the peer is simplex check if either slot is locked
                     if p.lock(hbp.dst, hbp.sl) {
+                        dprint!(verbose;10;"SLOT IS LOCKED! for {} dest {}", p.id, hbp.dst);
                         continue;
                     }
                     match p.talk_groups.get_mut(&hbp.dst) {
