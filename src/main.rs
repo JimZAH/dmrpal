@@ -1,7 +1,7 @@
 use dmrpal::{
     dprint, echo,
     peers::{Peer, Peertype},
-    sleep, streams,
+    sleep, slot, streams, system,
     talkgroups::{Talkgroup, TgActivate},
 };
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
@@ -13,8 +13,6 @@ mod hb;
 
 const SOFTWARE_VERSION: u64 = 1;
 const USERACTIVATED_DISCONNECT_TG: u32 = 4000;
-const MY_ID: u32 = 235045402;
-const REMOTE_PEER: &str = "78, 129, 135, 43";
 
 #[derive(Debug, PartialEq)]
 enum Masterstate {
@@ -33,8 +31,9 @@ fn closedown() {
 }
 
 fn main() {
+    let config = system::Config::load();
     let arg: Vec<String> = args().collect();
-    let mut verbose: u8 = 5;
+    let mut verbose: u8 = config.verbose;
     if arg.len() > 1 {
         match arg[1].as_ref() {
             "--verbose" | "-v" => match arg[2].parse::<u8>() {
@@ -49,46 +48,47 @@ fn main() {
     // Check the DB!
     let _db = db::init(SOFTWARE_VERSION);
 
-    let mut state: Masterstate;
+    let mut state: Masterstate = Masterstate::Disable;
 
     let mut streams = streams::Streams::init();
 
-    // For now (lots of these for nows) we manually create the master peer.
-    let mut master = Peer::new();
-    master.callsign = "PHOENIXF".to_owned();
-    master.id = MY_ID;
-    master.ip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(
-        std::net::Ipv4Addr::new(78, 129, 135, 43),
-        55555,
-    ));
-    master.last_check = SystemTime::now();
-    master.peer_type = Peertype::All;
-    master.software = "IPSC2".to_owned();
-    master.talk_groups = HashMap::from([
-        (23526, Talkgroup::set(1, TgActivate::Static(23526), None)),
-        (2351, Talkgroup::set(1, TgActivate::Static(2351), None)),
-        (235, Talkgroup::set(1, TgActivate::Static(235), None)),
-        (840, Talkgroup::set(2, TgActivate::Static(840), None)),
-        (841, Talkgroup::set(2, TgActivate::Static(841), None)),
-        (844, Talkgroup::set(2, TgActivate::Static(844), None)),
-        (123, Talkgroup::set(1, TgActivate::Static(123), None)),
-        (113, Talkgroup::set(1, TgActivate::Static(113), None)),
-        (80, Talkgroup::set(1, TgActivate::Static(80), None)),
-        (81, Talkgroup::set(1, TgActivate::Static(81), None)),
-        (82, Talkgroup::set(1, TgActivate::Static(82), None)),
-        (83, Talkgroup::set(1, TgActivate::Static(83), None)),
-        (84, Talkgroup::set(1, TgActivate::Static(84), None)),
-        (3, Talkgroup::set(1, TgActivate::Static(3), None)),
-        (2, Talkgroup::set(1, TgActivate::Static(2), None)),
-        (1, Talkgroup::set(1, TgActivate::Static(1), None)),
-    ]);
-    master.options = "TS1_1=23526".to_owned();
+    let mut system = system::System::init();
 
-    if !REMOTE_PEER.is_empty() {
-        // This is just a horrible POC to see if we could login as a peer. Yes we can so now the real work begins.
+    let mut mash: HashMap<u32, Peer> = HashMap::new();
+
+    if config.my_id != 0 {
+        let mut master = Peer::new();
+        master.callsign = "PHOENIXF".to_owned();
+        master.id = config.my_id;
+        master.ip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(
+            std::net::Ipv4Addr::new(78, 129, 135, 43),
+            55555,
+        ));
+        master.last_check = SystemTime::now();
+        master.peer_type = Peertype::All;
+        master.software = "IPSC2".to_owned();
+        master.talk_groups = HashMap::from([
+            (23526, Talkgroup::set(1, TgActivate::Static(23526), None)),
+            (2351, Talkgroup::set(1, TgActivate::Static(2351), None)),
+            (235, Talkgroup::set(1, TgActivate::Static(235), None)),
+            (840, Talkgroup::set(2, TgActivate::Static(840), None)),
+            (841, Talkgroup::set(2, TgActivate::Static(841), None)),
+            (844, Talkgroup::set(2, TgActivate::Static(844), None)),
+            (123, Talkgroup::set(1, TgActivate::Static(123), None)),
+            (113, Talkgroup::set(1, TgActivate::Static(113), None)),
+            (80, Talkgroup::set(1, TgActivate::Static(80), None)),
+            (81, Talkgroup::set(1, TgActivate::Static(81), None)),
+            (82, Talkgroup::set(1, TgActivate::Static(82), None)),
+            (83, Talkgroup::set(1, TgActivate::Static(83), None)),
+            (84, Talkgroup::set(1, TgActivate::Static(84), None)),
+            (3, Talkgroup::set(1, TgActivate::Static(3), None)),
+            (2, Talkgroup::set(1, TgActivate::Static(2), None)),
+            (1, Talkgroup::set(1, TgActivate::Static(1), None)),
+        ]);
+        master.options = "TS1_1=23526".to_owned();
+        // Insert the master into mash
+        mash.insert(config.my_id, master);
         state = Masterstate::LoginRequest;
-    } else {
-        state = Masterstate::Disable;
     }
 
     ctrlc::set_handler(move || {
@@ -110,16 +110,12 @@ fn main() {
     let mut payload_counter: usize = 0;
     let mut stats_timer = SystemTime::now();
 
-    let mut mash: HashMap<u32, Peer> = HashMap::new();
     let mut logins: HashSet<u32> = HashSet::new();
 
     // This needs to be automatic but for now lets be dirty and set manually.
     let dirty_master_options: bool = true;
 
-    // Insert the master into mash
-    mash.insert(MY_ID, master);
-
-    let myid = hb::RPTLPacket { id: MY_ID };
+    let myid = hb::RPTLPacket { id: config.my_id };
     let pip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(
         std::net::Ipv4Addr::new(78, 129, 135, 43),
         55555,
@@ -145,7 +141,7 @@ fn main() {
                     mash.retain(|_, p| //logins.contains(&k)
                 match p.last_check.elapsed(){
                 Ok(lc) => {
-                    if lc.as_secs() > 15 && p.id != MY_ID{
+                    if lc.as_secs() > 15 && p.id != config.my_id{
                         logins.remove(&p.id);
                         false
                     } else {
@@ -182,12 +178,13 @@ fn main() {
         };
 
         // check the state of master connection
-        if let Some(master) = mash.get_mut(&MY_ID) {
+        if let Some(master) = mash.get_mut(&config.my_id) {
             match state {
                 Masterstate::Disable => {}
                 Masterstate::LoginRequest => {
                     sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
                     dprint!(verbose;4;"sending password");
+                    system.master_reconnects += 1;
                     sleep(10000);
                 }
                 Masterstate::LoginPassword => {
@@ -232,7 +229,7 @@ fn main() {
 
                 Masterstate::Options => {
                     let options = hb::RPTOPacket::construct(
-                        MY_ID,
+                        config.my_id,
                         "TS1_1=23526;TS1_2=1;TS1_3=235;TS2_1=840;TS2_2=841;TS2_3=844;".to_string(),
                     );
                     dprint!(verbose;4;"Sending options to master");
@@ -265,11 +262,40 @@ fn main() {
                 // Repeat to peers who are members of the same talkgroup and peer type.
                 for p in mash.values_mut() {
                     // Check we can lock slot. If the peer is simplex check if either slot is locked
-                    if p.lock(hbp.dst, hbp.sl) {
-                        continue;
-                    }
                     match p.talk_groups.get_mut(&hbp.dst) {
                         Some(tg) => {
+                            match hbp.sl {
+                                1 => {
+                                    if p.duplex == 4 {
+                                        if !p.slot.lock(slot::Slots::One(hbp.dst))
+                                            || !p.slot.lock(slot::Slots::Two(hbp.dst))
+                                        {
+                                            continue;
+                                        }
+                                    } else {
+                                        if !p.slot.lock(slot::Slots::One(hbp.dst)) {
+                                            continue;
+                                        }
+                                    }
+                                }
+                                2 => {
+                                    if p.duplex == 4 {
+                                        if !p.slot.lock(slot::Slots::Two(hbp.dst))
+                                            || !p.slot.lock(slot::Slots::One(hbp.dst))
+                                        {
+                                            continue;
+                                        }
+                                    } else {
+                                        if !p.slot.lock(slot::Slots::Two(hbp.dst)) {
+                                            continue;
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    eprintln!("Can't lock slot, invalid slot number!");
+                                    continue;
+                                }
+                            }
                             if tg.sl == hbp.sl
                                 && p.ip != src
                                 && p.ip
@@ -279,7 +305,7 @@ fn main() {
                                     )
                             {
                                 // If we are sending to the master we need to rewrite the source ID
-                                if p.id == MY_ID {
+                                if p.id == config.my_id {
                                     tx_buff[11..15].copy_from_slice(&p.id.to_be_bytes());
                                 }
                                 match sock.send_to(&tx_buff, p.ip) {
@@ -321,7 +347,7 @@ fn main() {
                             }
                         }
                     }
-                    if hbp.dst == 9990 && hbp.sl == 2 && p.id == hbp.rpt && p.id != MY_ID {
+                    if hbp.dst == 9990 && hbp.sl == 2 && p.id == hbp.rpt && p.id != config.my_id {
                         dprint!(verbose;10;"{:X?}", &rx_buff[..55]);
                         p.echo(<[u8; 55]>::try_from(&rx_buff[..55]).unwrap(), hbp.si);
                     }
@@ -331,7 +357,7 @@ fn main() {
                 dprint!(verbose;2;"Todo!4a");
             }
             hb::MSTP => {
-                if let Some(master) = mash.get_mut(&MY_ID) {
+                if let Some(master) = mash.get_mut(&config.my_id) {
                     master.last_check = SystemTime::now();
                     state = Masterstate::Connected;
                 }
@@ -345,7 +371,7 @@ fn main() {
             hb::RPTL => {
                 let mut peer = Peer::new();
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
-                // Just send a predefined (random string). This needs to be random!
+                // Just send a predefined (random string). This should be random!
                 let randid = [0x0A, 0x7E, 0xD4, 0x98];
                 sock.send_to(&[hb::RPTACK, &rx_buff[4..8], &randid].concat(), src)
                     .unwrap();

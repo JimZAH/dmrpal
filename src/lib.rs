@@ -5,6 +5,7 @@ pub mod master;
 pub mod peers;
 pub mod slot;
 pub mod streams;
+pub mod system;
 pub mod talkgroups;
 
 // Not yet used
