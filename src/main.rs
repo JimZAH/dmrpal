@@ -1,7 +1,7 @@
 use dmrpal::{
     dprint, echo,
     peers::{Peer, Peertype},
-    sleep, streams, system,
+    sleep, slot, streams, system,
     talkgroups::{Talkgroup, TgActivate},
 };
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
@@ -262,12 +262,40 @@ fn main() {
                 // Repeat to peers who are members of the same talkgroup and peer type.
                 for p in mash.values_mut() {
                     // Check we can lock slot. If the peer is simplex check if either slot is locked
-                    if p.lock(hbp.dst, hbp.sl) {
-                        dprint!(verbose;10;"SLOT IS LOCKED! for {} dest {}", p.id, hbp.dst);
-                        continue;
-                    }
                     match p.talk_groups.get_mut(&hbp.dst) {
                         Some(tg) => {
+                            match hbp.sl {
+                                1 => {
+                                    if p.duplex == 4 {
+                                        if !p.slot.lock(slot::Slots::One(hbp.dst))
+                                            || !p.slot.lock(slot::Slots::Two(hbp.dst))
+                                        {
+                                            continue;
+                                        }
+                                    } else {
+                                        if !p.slot.lock(slot::Slots::One(hbp.dst)) {
+                                            continue;
+                                        }
+                                    }
+                                }
+                                2 => {
+                                    if p.duplex == 4 {
+                                        if !p.slot.lock(slot::Slots::Two(hbp.dst))
+                                            || !p.slot.lock(slot::Slots::One(hbp.dst))
+                                        {
+                                            continue;
+                                        }
+                                    } else {
+                                        if !p.slot.lock(slot::Slots::Two(hbp.dst)) {
+                                            continue;
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    eprintln!("Can't lock slot, invalid slot number!");
+                                    continue;
+                                }
+                            }
                             if tg.sl == hbp.sl
                                 && p.ip != src
                                 && p.ip
