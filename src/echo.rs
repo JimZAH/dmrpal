@@ -1,28 +1,41 @@
-use std::{net::SocketAddr, time::SystemTime};
+use std::time::SystemTime;
 
 // Frame struct that hold data to echo
 pub struct Frame {
-    data: [u8; 55],
+    pub data: [u8; 55],
     stream: u32,
 }
 
-#[derive(Default)]
 pub struct Queue {
-    echos: Vec<Frame>,
+    pub echos: Vec<Frame>,
+    pub la_time: SystemTime,
 }
 
 impl Frame {
-    pub fn create(data: [u8; 55], src: SocketAddr, stream: u32) -> Self {
+    pub fn create(data: [u8; 55], stream: u32) -> Self {
         Self { data, stream }
     }
 
     pub fn commit(self, q: &mut Queue) {
-        Queue::push(q, self)
+        Queue::submit(q, self)
     }
 }
 
 impl Queue {
-    fn push(&mut self, frame: Frame) {
-        self.echos.push(frame)
+    pub fn default() -> Self {
+        Self {
+            echos: Vec::new(),
+            la_time: SystemTime::now(),
+        }
+    }
+
+    pub fn has_items(&self) -> bool {
+        self.echos.is_empty()
+    }
+
+    pub fn submit(&mut self, frame: Frame) {
+        println!("Submitting to Queue for stream ID: {}", frame.stream);
+        self.echos.push(frame);
+        self.la_time = SystemTime::now();
     }
 }

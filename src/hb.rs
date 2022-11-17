@@ -2,8 +2,6 @@ use hmac_sha256::Hash;
 
 pub const DMRA: &[u8] = b"DMRA";
 pub const DMRD: &[u8] = b"DMRD";
-pub const MSTCL: &[u8] = b"MSTCL";
-pub const MSTACK: &[u8] = b"MSTACK";
 pub const MSTNAK: &[u8] = b"MSTNAK";
 pub const MSTPONG: &[u8] = b"MSTPONG";
 pub const MSTN: &[u8] = b"MSTN";
@@ -13,14 +11,14 @@ pub const RPTL: &[u8] = b"RPTL";
 pub const RPTPING: &[u8] = b"RPTPING";
 pub const RPTCL: &[u8] = b"RPTCL";
 pub const RPTACK: &[u8] = b"RPTACK";
-pub const RPTNAK: &[u8] = b"RPTNAK";
 pub const RPTK: &[u8] = b"RPTK";
 pub const RPTC: &[u8] = b"RPTC";
 pub const RPTP: &[u8] = b"RPTP";
 pub const RPTA: &[u8] = b"RPTA";
 pub const RPTO: &[u8] = b"RPTO";
 pub const RPTS: &[u8] = b"RPTS";
-pub const RPTSBKN: &[u8] = b"RPTSBKN";
+
+pub const RX_BUFF_MAX: usize = 512;
 
 pub const RX_BUFF_MAX: usize = 512;
 
@@ -166,7 +164,6 @@ impl RPTLPacket {
         b[4..].copy_from_slice(&self.id.to_be_bytes());
         b
     }
-
 
     pub fn password_response(&self, buf: [u8; RX_BUFF_MAX]) -> [u8; 40] {
         let password = b"PASSWORD";

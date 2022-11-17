@@ -1,27 +1,22 @@
-use dmrpal::{debug, echo, master, sleep, slot, SystemState, Systemstate};
+use dmrpal::{
+    dprint, echo,
+    peers::{Peer, Peertype},
+    sleep, slot, streams, system,
+    talkgroups::{Talkgroup, TgActivate},
+};
 use std::collections::{hash_map::HashMap, hash_set::HashSet};
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
-use std::{io, str, string, time::SystemTime};
+use std::{env::args, io, str, time::SystemTime};
 
 mod db;
 mod hb;
 
 const SOFTWARE_VERSION: u64 = 1;
 const USERACTIVATED_DISCONNECT_TG: u32 = 4000;
-const MY_ID: u32 = 235045402;
-const REMOTE_PEER: &str = "78, 129, 135, 43";
-
-#[derive(Debug, PartialEq)]
-enum Peertype {
-    Local,
-    Friend,
-    All,
-}
 
 #[derive(Debug, PartialEq)]
 enum Masterstate {
     Disable,
-    Disconnected,
     LoginRequest,
     LoginPassword,
     Options,
@@ -30,327 +25,70 @@ enum Masterstate {
     Logout,
 }
 
-enum TgActivate {
-    Static(u32),
-    Ua(u32),
-}
-
-struct Peer {
-    id: u32,
-    callsign: String,
-    duplex: u8,
-    frequency: String,
-    software: String,
-    latitude: f32,
-    last_check: SystemTime,
-    longitude: f32,
-    power: u16,
-    height: u16,
-    ip: std::net::SocketAddr,
-    talk_groups: HashMap<u32, Talkgroup>,
-    tx_bytes: usize,
-    options: String,
-    peer_type: Peertype,
-    rx_bytes: usize,
-    slot: slot::Slot,
-    tg_expire: u64,
-}
-
-#[derive(Debug)]
-struct Talkgroup {
-    expire: u64,
-    id: u32,
-    la: SystemTime,
-    routeable: Peertype,
-    sl: u8,
-    ua: bool,
-    time_stamp: SystemTime,
-}
-
-impl Peer {
-    fn new() -> Self {
-        Self {
-            id: 0,
-            callsign: string::String::default(),
-            duplex: 0,
-            frequency: string::String::default(),
-            software: string::String::default(),
-            latitude: 0.0,
-            last_check: SystemTime::now(),
-            longitude: 0.0,
-            power: 0,
-            height: 0,
-            ip: std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
-            talk_groups: HashMap::from([
-                (0, Talkgroup::default()),
-                (31337, Talkgroup::set(2, TgActivate::Static(31337), None)),
-                (2351, Talkgroup::set(1, TgActivate::Static(2351), None)),
-                (235, Talkgroup::set(1, TgActivate::Static(235), None)),
-                (844, Talkgroup::set(2, TgActivate::Static(844), None)),
-                (840, Talkgroup::set(2, TgActivate::Static(840), None)),
-                (123, Talkgroup::set(1, TgActivate::Static(123), None)),
-                (113, Talkgroup::set(1, TgActivate::Static(113), None)),
-                (3, Talkgroup::set(1, TgActivate::Static(3), None)),
-                (2, Talkgroup::set(1, TgActivate::Static(2), None)),
-                (1, Talkgroup::set(1, TgActivate::Static(1), None)),
-            ]),
-            tx_bytes: 0,
-            options: string::String::default(),
-            peer_type: Peertype::Local,
-            rx_bytes: 0,
-            slot: slot::Slot::init(),
-            tg_expire: 0,
-        }
-    }
-
-    // Check if the peer is allowed to sign in.
-    fn acl(&self) -> bool {
-        let known_peers = vec![000000];
-        for k in known_peers {
-            if self.id.eq(&k) {
-                return false;
-            }
-        }
-        true
-    }
-
-    fn connect_master(&mut self) -> Masterstate {
-        let myid = hb::RPTLPacket { id: MY_ID };
-        let pip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(
-            std::net::Ipv4Addr::new(78, 129, 135, 43),
-            55555,
-        ));
-        let mut rx_buff = [0; hb::RX_BUFF_MAX];
-        let mut state = Masterstate::LoginRequest;
-        let sock = match UdpSocket::bind("0.0.0.0:55555") {
-            Ok(s) => s,
-            Err(e) => {
-                eprintln!("There was an error binding: {}", e);
-                std::process::exit(-1);
-            }
-        };
-        loop {
-            sock.send_to(&myid.request_login(), pip).unwrap();
-
-            let (_, src) = match sock.recv_from(&mut rx_buff) {
-                Ok(rs) => (rs),
-
-                Err(e) => {
-                    eprintln!("There was an error listening: {}", e);
-                    std::process::exit(-1);
-                }
-            };
-
-            match &rx_buff[..6] {
-                hb::RPTACK => match &state {
-                    Masterstate::Disable => {}
-                    Masterstate::Disconnected => {}
-                    Masterstate::LoginRequest => {
-                        sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
-                        println!("sending password");
-                        state = Masterstate::LoginPassword;
-                        sleep(80000);
-                    }
-                    Masterstate::LoginPassword => {
-                        sock.send_to(&myid.info(), pip).unwrap();
-                        println!("sending info");
-                        state = Masterstate::Connected;
-                        sleep(80000);
-                    }
-                    Masterstate::Connected => {
-                        sock.send_to(&myid.ping(), pip).unwrap();
-                        println!("connected");
-                        self.ip = src;
-                        break;
-                    }
-                    Masterstate::Options => {}
-                    Masterstate::Logout => {}
-                    _ => {}
-                },
-                hb::RPTNAK => {
-                    println!("MASTER Connect: Received NAK");
-                    state = Masterstate::Disconnected;
-                    break;
-                }
-                _ => println!("MASTER Connect: Packet not handled!\n{:X?}", rx_buff),
-            }
-        }
-        state
-    }
-
-    fn options(&mut self) {
-        for opts in self.options.split(';') {
-            if opts.len() < 3 {
-                continue;
-            }
-            match &opts[..3] {
-                "TS1" | "TS2" => match opts.chars().nth(2) {
-                    Some(s) => {
-                        let slot = s as u8 - 48;
-                        let mut tg: u32 = 0;
-                        for i in opts[5..].bytes() {
-                            if i > 47 && i < 58 {
-                                tg = tg * 10;
-                                tg = tg + i as u32 - 48;
-                            }
-                        }
-                        self.talk_groups
-                            .insert(tg, Talkgroup::set(slot, TgActivate::Static(tg), None));
-                        println!("OPTIONS {}, Added {} {}", self.id, slot, tg);
-                    }
-                    None => continue,
-                },
-                "UAT" => {
-                    let mut t: u64 = 0;
-                    for i in opts[4..].bytes() {
-                        if i > 47 && i < 58 {
-                            t = t * 10;
-                            t = t + i as u64 - 48;
-                        }
-                    }
-                    self.tg_expire = t;
-                }
-                _ => continue,
-            }
-        }
-    }
-
-    // Set the peer ID
-    fn pid(&mut self, buff: &[u8; 4]) {
-        self.id = ((buff[0] as u32) << 24)
-            | ((buff[1] as u32) << 16)
-            | ((buff[2] as u32) << 8)
-            | (buff[3] as u32);
-    }
-}
-
-impl Talkgroup {
-    // return a default value for talkgroup
-    fn default() -> Self {
-        Self {
-            expire: 0,
-            id: 0,
-            la: SystemTime::now(),
-            routeable: Peertype::Local,
-            sl: 1,
-            ua: false,
-            time_stamp: SystemTime::now(),
-        }
-    }
-
-    // Remove a talkgroup from a peer
-    fn ua_clear(&mut self) -> bool {
-        if self.ua {
-            return match self.time_stamp.elapsed() {
-                Ok(ts) => {
-                    if ts.as_secs() > self.expire {
-                        // If the talkgroup has traffic, skip and try again when there's no traffic
-                        if let Ok(la) = self.la.elapsed() {
-                            if la.as_secs() <= 5 {
-                                return true;
-                            }
-                        };
-                        println!("Removing TG: {}, From Peer: {}", self.id, self.id);
-                        false
-                    } else {
-                        true
-                    }
-                }
-                Err(_) => {
-                    println!("There was an error passing time for UA, removing TG!");
-                    false
-                }
-            };
-        }
-        true
-    }
-
-    // Set a talk group to a peer
-    fn set(sl: u8, tg: TgActivate, exp: Option<u64>) -> Self {
-        let (ua, talk_group, expire) = match tg {
-            TgActivate::Static(u) => (false, u, 0),
-            TgActivate::Ua(u) => {
-                let e: u64 = match exp {
-                    Some(v) => v,
-                    None => 900,
-                };
-                (true, u, e)
-            }
-        };
-
-        Self {
-            expire,
-            id: talk_group,
-            la: SystemTime::now(),
-            routeable: Peertype::Local,
-            sl,
-            ua,
-            time_stamp: SystemTime::now(),
-        }
-    }
-}
-
-fn echo(sock: &std::net::UdpSocket, dst: std::net::SocketAddr, data: &Vec<[u8; 55]>) {
-    for d in data {
-        sock.send_to(d, dst).unwrap();
-    }
-}
-
 // Need to better handle close down gracefully but this will do for now.
 fn closedown() {
-    println!("Shutting Down, GoodBye!\n");
     std::process::exit(0);
 }
 
 fn main() {
-    println!("Loading...");
+    let config = system::Config::load();
+    let arg: Vec<String> = args().collect();
+    let mut verbose: u8 = config.verbose;
+    if arg.len() > 1 {
+        match arg[1].as_ref() {
+            "--verbose" | "-v" => match arg[2].parse::<u8>() {
+                Ok(v) => verbose = v,
+                Err(_) => dprint!(verbose;2;"Unable to set verbosity, using default"),
+            },
+            _ => {}
+        }
+    }
+    dprint!(verbose;4;"Loading...");
 
     // Check the DB!
     let _db = db::init(SOFTWARE_VERSION);
 
-    // Queue for Echo frames
-    let mut echo_queue = echo::Queue::default();
+    let mut state: Masterstate = Masterstate::Disable;
 
-    let mut state = Masterstate::Disconnected;
+    let mut streams = streams::Streams::init();
 
-    let mut states: HashMap<u32, master::State> = HashMap::new();
+    let mut system = system::System::init();
 
-    // For now (lots of these for nows) we manually create the master peer.
-    let mut master = Peer::new();
-    master.callsign = "PHOENIXF".to_owned();
-    master.id = MY_ID;
-    master.ip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(
-        std::net::Ipv4Addr::new(78, 129, 135, 43),
-        55555,
-    ));
-    master.last_check = SystemTime::now();
-    master.peer_type = Peertype::All;
-    master.software = "IPSC2".to_owned();
-    master.talk_groups = HashMap::from([
-        (23526, Talkgroup::set(1, TgActivate::Static(23526), None)),
-        (2351, Talkgroup::set(1, TgActivate::Static(2351), None)),
-        (235, Talkgroup::set(1, TgActivate::Static(235), None)),
-        (840, Talkgroup::set(2, TgActivate::Static(840), None)),
-        (841, Talkgroup::set(2, TgActivate::Static(841), None)),
-        (844, Talkgroup::set(2, TgActivate::Static(844), None)),
-        (123, Talkgroup::set(1, TgActivate::Static(123), None)),
-        (113, Talkgroup::set(1, TgActivate::Static(113), None)),
-        (80, Talkgroup::set(1, TgActivate::Static(80), None)),
-        (81, Talkgroup::set(1, TgActivate::Static(81), None)),
-        (82, Talkgroup::set(1, TgActivate::Static(82), None)),
-        (83, Talkgroup::set(1, TgActivate::Static(83), None)),
-        (84, Talkgroup::set(1, TgActivate::Static(84), None)),
-        (3, Talkgroup::set(1, TgActivate::Static(3), None)),
-        (2, Talkgroup::set(1, TgActivate::Static(2), None)),
-        (1, Talkgroup::set(1, TgActivate::Static(1), None)),
-    ]);
-    master.options = "TS1_1=23526".to_owned();
+    let mut mash: HashMap<u32, Peer> = HashMap::new();
 
-    if !REMOTE_PEER.is_empty() {
-        // This is just a horrible POC to see if we could login as a peer. Yes we can so now the real work begins.
+    if config.my_id != 0 {
+        let mut master = Peer::new();
+        master.callsign = "PHOENIXF".to_owned();
+        master.id = config.my_id;
+        master.ip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(
+            std::net::Ipv4Addr::new(78, 129, 135, 43),
+            55555,
+        ));
+        master.last_check = SystemTime::now();
+        master.peer_type = Peertype::All;
+        master.software = "IPSC2".to_owned();
+        master.talk_groups = HashMap::from([
+            (23526, Talkgroup::set(1, TgActivate::Static(23526), None)),
+            (2351, Talkgroup::set(1, TgActivate::Static(2351), None)),
+            (235, Talkgroup::set(1, TgActivate::Static(235), None)),
+            (840, Talkgroup::set(2, TgActivate::Static(840), None)),
+            (841, Talkgroup::set(2, TgActivate::Static(841), None)),
+            (844, Talkgroup::set(2, TgActivate::Static(844), None)),
+            (123, Talkgroup::set(1, TgActivate::Static(123), None)),
+            (113, Talkgroup::set(1, TgActivate::Static(113), None)),
+            (80, Talkgroup::set(1, TgActivate::Static(80), None)),
+            (81, Talkgroup::set(1, TgActivate::Static(81), None)),
+            (82, Talkgroup::set(1, TgActivate::Static(82), None)),
+            (83, Talkgroup::set(1, TgActivate::Static(83), None)),
+            (84, Talkgroup::set(1, TgActivate::Static(84), None)),
+            (3, Talkgroup::set(1, TgActivate::Static(3), None)),
+            (2, Talkgroup::set(1, TgActivate::Static(2), None)),
+            (1, Talkgroup::set(1, TgActivate::Static(1), None)),
+        ]);
+        master.options = "TS1_1=23526".to_owned();
+        // Insert the master into mash
+        mash.insert(config.my_id, master);
         state = Masterstate::LoginRequest;
-    } else {
-        state = Masterstate::Disable;
     }
 
     ctrlc::set_handler(move || {
@@ -361,29 +99,23 @@ fn main() {
     let sock = match UdpSocket::bind("0.0.0.0:55555") {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("There was an error binding: {}", e);
+            dprint!(verbose;1;"There was an error binding: {}", e);
             std::process::exit(-1);
         }
     };
 
     sock.set_nonblocking(true).unwrap();
 
-    let mut dvec: Vec<[u8; 55]> = Vec::new();
-    let mut replay_counter = 0;
     let mut d_counter = 31;
     let mut payload_counter: usize = 0;
     let mut stats_timer = SystemTime::now();
 
-    let mut mash: HashMap<u32, Peer> = HashMap::new();
     let mut logins: HashSet<u32> = HashSet::new();
 
     // This needs to be automatic but for now lets be dirty and set manually.
     let dirty_master_options: bool = true;
 
-    // Insert the master into mash
-    mash.insert(MY_ID, master);
-
-    let myid = hb::RPTLPacket { id: MY_ID };
+    let myid = hb::RPTLPacket { id: config.my_id };
     let pip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(
         std::net::Ipv4Addr::new(78, 129, 135, 43),
         55555,
@@ -396,18 +128,20 @@ fn main() {
         match stats_timer.elapsed() {
             Ok(t) => {
                 if t.as_secs() >= 60 {
-                    println!("Number of logins: {}", logins.len());
+                    dprint!(verbose;4;"Number of logins: {}", logins.len());
                     for (t, p) in &mash {
-                        println!(
+                        dprint!(verbose;4;
                             "Peer details\n\nID: {}\nCall: {}\nRX: {} TX: {}\nIP: {}",
                             t, p.callsign, p.rx_bytes, p.tx_bytes, p.ip
                         );
+
+                        dprint!(verbose;4;"Total Number of streams processed: {}", streams.total);
                     }
                     stats_timer = SystemTime::now();
                     mash.retain(|_, p| //logins.contains(&k)
                 match p.last_check.elapsed(){
                 Ok(lc) => {
-                    if lc.as_secs() > 15 && p.id != MY_ID{
+                    if lc.as_secs() > 15 && p.id != config.my_id{
                         logins.remove(&p.id);
                         false
                     } else {
@@ -419,7 +153,7 @@ fn main() {
                     }
                 },
                 Err(e) => {
-                    eprintln!("Error parsing last check time: {}", e);
+                    dprint!(verbose;2;"Error parsing last check time: {}",e);
                     false
                 }
                 });
@@ -438,35 +172,24 @@ fn main() {
                 std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
             ),
             Err(e) => {
-                eprintln!("There was an error listening: {}", e);
+                dprint!(verbose;1;"There was an error listening: {}", e);
                 std::process::exit(-1);
             }
         };
 
-        // If we have a message play it back
-        if !dvec.is_empty() && replay_counter > 1 {
-            replay_counter = 0;
-            echo(&sock, src, &dvec);
-            println!("echo");
-            dvec.clear();
-        }
-
-        if !dvec.is_empty() {
-            replay_counter += 1;
-        }
-
         // check the state of master connection
-        if let Some(master) = mash.get_mut(&MY_ID) {
+        if let Some(master) = mash.get_mut(&config.my_id) {
             match state {
                 Masterstate::Disable => {}
                 Masterstate::LoginRequest => {
                     sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
-                    println!("sending password");
+                    dprint!(verbose;4;"sending password");
+                    system.master_reconnects += 1;
                     sleep(10000);
                 }
                 Masterstate::LoginPassword => {
                     sock.send_to(&myid.info(), pip).unwrap();
-                    println!("sending info");
+                    dprint!(verbose;4;"sending info");
                     sleep(95000);
                 }
                 Masterstate::Connected => match master.last_check.elapsed() {
@@ -481,7 +204,7 @@ fn main() {
                         }
                     }
                     Err(_) => {
-                        eprintln!("Error passing master last check time");
+                        dprint!(verbose;2;"Error passing master last check time");
                     }
                 },
                 Masterstate::WaitingPong => match master.last_check.elapsed() {
@@ -491,7 +214,7 @@ fn main() {
                         }
                     }
                     Err(_) => {
-                        eprintln!("Error passing master last check time");
+                        dprint!(verbose;2;"Error passing master last check time");
                     }
                 },
                 Masterstate::Logout => {
@@ -503,45 +226,76 @@ fn main() {
                         }
                     }
                 }
-                
+
                 Masterstate::Options => {
                     let options = hb::RPTOPacket::construct(
-                        MY_ID,
+                        config.my_id,
                         "TS1_1=23526;TS1_2=1;TS1_3=235;TS2_1=840;TS2_2=841;TS2_3=844;".to_string(),
                     );
-                    println!("Sending options to master");
+                    dprint!(verbose;4;"Sending options to master");
                     sock.send_to(&options, pip).unwrap();
-                }
-                _ => {
-                    println!("Wrong master state");
                 }
             }
         }
 
         match &rx_buff[..4] {
             hb::DMRA => {
-                println!("Todo! 1");
+                dprint!(verbose;2;"Todo! 1");
             }
             hb::DMRD => {
                 let hbp = hb::DMRDPacket::parse(rx_buff);
+                if streams.stream(hbp.si) {
+                    dprint!(verbose;3;"Stream: {}, Timeout", hbp.si);
+                    continue;
+                }
                 d_counter += 1;
-                replay_counter = 0;
-                let _packet_data = &rx_buff[..53];
 
                 if d_counter > 32 {
                     d_counter = 0;
-                    println!(
-                        "DEBUG: rf_src: {}, dest: {}, packet seq: {:x?} slot: {}, ctype: {}, stream id: {} payload count: {}",
+                    dprint!(verbose;10;
+                        "rf_src: {}, dest: {}, packet seq: {:x?} slot: {}, ctype: {}, stream id: {} payload count: {}",
                         hbp.src, hbp.dst, hbp.seq, hbp.sl, hbp.ct, hbp.si, payload_counter
                     );
                 }
                 let mut tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
-                //let tx_buff = hbp.construct();
 
                 // Repeat to peers who are members of the same talkgroup and peer type.
                 for p in mash.values_mut() {
+                    // Check we can lock slot. If the peer is simplex check if either slot is locked
                     match p.talk_groups.get_mut(&hbp.dst) {
                         Some(tg) => {
+                            match hbp.sl {
+                                1 => {
+                                    if p.duplex == 4 {
+                                        if !p.slot.lock(slot::Slots::One(hbp.dst))
+                                            || !p.slot.lock(slot::Slots::Two(hbp.dst))
+                                        {
+                                            continue;
+                                        }
+                                    } else {
+                                        if !p.slot.lock(slot::Slots::One(hbp.dst)) {
+                                            continue;
+                                        }
+                                    }
+                                }
+                                2 => {
+                                    if p.duplex == 4 {
+                                        if !p.slot.lock(slot::Slots::Two(hbp.dst))
+                                            || !p.slot.lock(slot::Slots::One(hbp.dst))
+                                        {
+                                            continue;
+                                        }
+                                    } else {
+                                        if !p.slot.lock(slot::Slots::Two(hbp.dst)) {
+                                            continue;
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    eprintln!("Can't lock slot, invalid slot number!");
+                                    continue;
+                                }
+                            }
                             if tg.sl == hbp.sl
                                 && p.ip != src
                                 && p.ip
@@ -550,51 +304,15 @@ fn main() {
                                         0,
                                     )
                             {
-                                // Check we can lock slot. If the peer is simplex check if either slot is locked
-                                match hbp.sl {
-                                    1 => {
-                                        if p.duplex == 4 {
-                                            if !p.slot.lock(slot::Slots::One(hbp.dst))
-                                                || !p.slot.lock(slot::Slots::Two(hbp.dst))
-                                            {
-                                                println!("Peer {} slot is busy", p.id);
-                                                continue;
-                                            }
-                                        } else {
-                                            if !p.slot.lock(slot::Slots::One(hbp.dst)) {
-                                                println!("Peer {} slot 1 is already locked", p.id);
-                                                continue;
-                                            }
-                                        }
-                                    }
-                                    2 => {
-                                        if p.duplex == 4 {
-                                            if !p.slot.lock(slot::Slots::Two(hbp.dst))
-                                                || !p.slot.lock(slot::Slots::One(hbp.dst))
-                                            {
-                                                println!("Peer {} slot is busy", p.id);
-                                                continue;
-                                            }
-                                        } else {
-                                            if !p.slot.lock(slot::Slots::Two(hbp.dst)) {
-                                                println!("Peer {} slot 2 is already locked", p.id);
-                                                continue;
-                                            }
-                                        }
-                                    }
-                                    _ => {
-                                        eprintln!("Can't lock slot, invalid slot number!");
-                                        continue;
-                                    }
-                                }
-
                                 // If we are sending to the master we need to rewrite the source ID
-                                if p.id == MY_ID {
+                                if p.id == config.my_id {
                                     tx_buff[11..15].copy_from_slice(&p.id.to_be_bytes());
                                 }
                                 match sock.send_to(&tx_buff, p.ip) {
                                     Ok(s) => p.rx_bytes += s,
-                                    Err(em) => eprintln!("Error: {} sending to peer: {}", em, p.id),
+                                    Err(em) => {
+                                        dprint!(verbose;2;"Error: {} sending to peer: {}", em, p.id)
+                                    }
                                 }
                                 tg.la = SystemTime::now();
                             } else if tg.ua {
@@ -619,7 +337,7 @@ fn main() {
                                         Some(p.tg_expire),
                                     ),
                                 );
-                                println!(
+                                dprint!(verbose;4;
                                     "Added TG: {} to peer: id-{} call-{} ",
                                     &hbp.dst, &p.id, &p.callsign
                                 );
@@ -629,18 +347,17 @@ fn main() {
                             }
                         }
                     }
-                }
-
-                if hbp.dst == 9990 && hbp.sl == 2 {
-                    let f = echo::Frame::create(tx_buff, src, hbp.si);
-                    f.commit(&mut echo_queue);
+                    if hbp.dst == 9990 && hbp.sl == 2 && p.id == hbp.rpt && p.id != config.my_id {
+                        dprint!(verbose;10;"{:X?}", &rx_buff[..55]);
+                        p.echo(<[u8; 55]>::try_from(&rx_buff[..55]).unwrap(), hbp.si);
+                    }
                 }
             }
             hb::MSTN => {
-                println!("Todo!4a");
+                dprint!(verbose;2;"Todo!4a");
             }
             hb::MSTP => {
-                if let Some(master) = mash.get_mut(&MY_ID) {
+                if let Some(master) = mash.get_mut(&config.my_id) {
                     master.last_check = SystemTime::now();
                     state = Masterstate::Connected;
                 }
@@ -654,24 +371,24 @@ fn main() {
             hb::RPTL => {
                 let mut peer = Peer::new();
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
-                // Just send a predefined (random string). This needs to be random!
+                // Just send a predefined (random string). This should be random!
                 let randid = [0x0A, 0x7E, 0xD4, 0x98];
                 sock.send_to(&[hb::RPTACK, &rx_buff[4..8], &randid].concat(), src)
                     .unwrap();
             }
             hb::RPTCL => {
-                println!("Todo!7");
+                dprint!(verbose;2;"Todo!7");
             }
             hb::RPTK => {
                 let mut peer = Peer::new();
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
                 if !peer.acl() {
-                    println!("Peer ID: {} is blocked", peer.id);
+                    dprint!(verbose;3;"Peer ID: {} is blocked", peer.id);
                     sock.send_to(&[hb::MSTNAK, &rx_buff[4..8]].concat(), src)
                         .unwrap();
                     continue;
                 }
-                println!("Peer: {} has logged in", peer.id);
+                dprint!(verbose;4;"Peer: {} has logged in", peer.id);
 
                 if logins.insert(peer.id) {
                     sock.send_to(&[hb::RPTACK, &rx_buff[4..8]].concat(), src)
@@ -684,7 +401,7 @@ fn main() {
                 peer.ip = src;
 
                 if !logins.contains(&peer.id) {
-                    println!("Unknown peer sent info {}", peer.id);
+                    dprint!(verbose;4;"Unknown peer sent info {}", peer.id);
                     continue;
                 }
 
@@ -697,16 +414,16 @@ fn main() {
                     Ok(c) => c.to_owned(),
                     Err(_) => "Unknown".to_owned(),
                 };
-                println!("Callsign is: {}", peer.callsign);
-                println!("Frequency is: {}", peer.frequency);
-                println!("Peer duplex type is: {}", peer.duplex);
+                dprint!(verbose;4;"Callsign is: {}", peer.callsign);
+                dprint!(verbose;4;"Frequency is: {}", peer.frequency);
+                dprint!(verbose;4;"Peer duplex type is: {}", peer.duplex);
 
                 // To help set the correct offsets print info received in bytes
-                println!("Peer details raw");
+                dprint!(verbose;10;"Peer details raw");
                 for (a, b) in rx_buff.iter().enumerate() {
                     print!("{a}:{b:X}  ");
                 }
-                println!();
+                dprint!(verbose;10;"\n");
 
                 mash.insert(peer.id, peer);
 
@@ -746,8 +463,8 @@ fn main() {
                     Masterstate::Logout => Masterstate::Logout,
                     Masterstate::Connected | Masterstate::Options => Masterstate::Connected,
                     _ => {
-                        debug("RPTACK RECEIVED: UNKNOWN Masterstate");
-                        println!("Master state: {:?}", state);
+                        dprint!(verbose;3;"RPTACK RECEIVED: UNKNOWN Masterstate");
+                        dprint!(verbose;3;"Master state: {:?}", state);
                         Masterstate::Disable
                     }
                 }
@@ -756,7 +473,7 @@ fn main() {
                 let mut peer = Peer::new();
                 let peer_options = hb::RPTOPacket::parse(rx_buff);
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
-                println!("Peer {}; has sent options:", peer.id);
+                dprint!(verbose;4;"Peer {}; has sent options:", peer.id);
                 match mash.get_mut(&peer.id) {
                     Some(p) => {
                         p.options = peer_options.options;
@@ -768,10 +485,33 @@ fn main() {
                 };
             }
             hb::RPTS => {
-                println!("Todo!12");
+                dprint!(verbose;2;"Todo!12");
             }
             _ => {
                 sleep(200);
+                /* If a peer has an echo Queue to play then process it in quiet time. The queue is only played after 5 seconds has passed since the user recorded the message.
+                Only when the queue has been played do we then drop the queue by replacing with the default.
+                This isn't really an efficient way of doing this but it works for now, we can always improve later.
+                 */
+                for p in mash.values_mut() {
+                    if !p.echo.has_items() {
+                        if let Ok(t) = p.echo.la_time.elapsed() {
+                            if t.as_secs() >= 5 {
+                                if p.lock(p.id, 2) {
+                                    continue;
+                                }
+                                dprint!(verbose;10;"Sending echo to peer: {}", p.id);
+                                for i in &p.echo.echos {
+                                    dprint!(verbose;10;"{:X?}", &i.data);
+                                    sock.send_to(&i.data, p.ip).unwrap();
+                                }
+                                p.echo = echo::Queue::default();
+                            }
+                        }
+                    }
+                }
+
+                streams.check();
             }
         }
         rx_buff = [0; hb::RX_BUFF_MAX];
