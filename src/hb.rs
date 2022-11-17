@@ -20,6 +20,8 @@ pub const RPTS: &[u8] = b"RPTS";
 
 pub const RX_BUFF_MAX: usize = 512;
 
+pub const RX_BUFF_MAX: usize = 512;
+
 // DMRD paclet structure
 pub struct DMRDPacket {
     pub seq: u8,
