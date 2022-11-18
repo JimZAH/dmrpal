@@ -240,14 +240,14 @@ fn main() {
             hb::DMRD => {
                 let hbp = hb::DMRDPacket::parse(rx_buff);
 
-                // Check to see if the sending peer is enabled or known
+                // Check to see if the sending peer is enabled //TODO: or known
                 match mash.get(&hbp.rpt) {
                     Some(p) => {
                         if !p.enabled {
                             continue;
                         }
                     }
-                    None => continue,
+                    None => {},
                 }
 
                 if streams.stream(hbp.si) {
