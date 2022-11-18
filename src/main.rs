@@ -389,6 +389,8 @@ fn main() {
                 dprint!(verbose;4;"Peer: {} has logged in", peer.id);
                 peer.ip = src;
                 mash.insert(peer.id, peer);
+                sock.send_to(&[hb::RPTACK, &rx_buff[4..8]].concat(), src)
+                    .unwrap();
             }
             hb::RPTC => {
                 let mut peer = Peer::new();
