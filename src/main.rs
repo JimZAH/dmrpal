@@ -238,6 +238,17 @@ fn main() {
             }
             hb::DMRD => {
                 let hbp = hb::DMRDPacket::parse(rx_buff);
+
+                // Check to see if the sending peer is enabled or known
+                match mash.get(&hbp.rpt) {
+                    Some(p) => {
+                        if !p.enabled {
+                            continue;
+                        }
+                    }
+                    None => continue,
+                }
+
                 if streams.stream(hbp.si) {
                     dprint!(verbose;3;"Stream: {}, Timeout", hbp.si);
                     continue;
