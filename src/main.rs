@@ -58,6 +58,7 @@ fn main() {
 
     if config.my_id != 0 {
         let mut master = Peer::new();
+        master.enabled = true;
         master.callsign = "PHOENIXF".to_owned();
         master.id = config.my_id;
         master.ip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(
