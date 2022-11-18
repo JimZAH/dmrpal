@@ -4,7 +4,7 @@ use dmrpal::{
     sleep, slot, streams, system,
     talkgroups::{Talkgroup, TgActivate},
 };
-use std::collections::{hash_map::HashMap, hash_set::HashSet};
+use std::collections::hash_map::HashMap;
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::{env::args, io, str, time::SystemTime};
 
