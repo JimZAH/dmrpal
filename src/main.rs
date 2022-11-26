@@ -4,7 +4,7 @@ use dmrpal::{
     sleep, slot, streams, system,
     talkgroups::{Talkgroup, TgActivate},
 };
-use std::collections::{hash_map::HashMap, hash_set::HashSet};
+use std::collections::hash_map::HashMap;
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::{env::args, io, str, time::SystemTime};
 
@@ -58,6 +58,7 @@ fn main() {
 
     if config.my_id != 0 {
         let mut master = Peer::new();
+        master.enabled = true;
         master.callsign = "PHOENIXF".to_owned();
         master.id = config.my_id;
         master.ip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(
@@ -110,8 +111,6 @@ fn main() {
     let mut payload_counter: usize = 0;
     let mut stats_timer = SystemTime::now();
 
-    let mut logins: HashSet<u32> = HashSet::new();
-
     // This needs to be automatic but for now lets be dirty and set manually.
     let dirty_master_options: bool = true;
 
@@ -128,7 +127,7 @@ fn main() {
         match stats_timer.elapsed() {
             Ok(t) => {
                 if t.as_secs() >= 60 {
-                    dprint!(verbose;4;"Number of logins: {}", logins.len());
+                    dprint!(verbose;4;"Number of logins: {}", mash.len());
                     for (t, p) in &mash {
                         dprint!(verbose;4;
                             "Peer details\n\nID: {}\nCall: {}\nRX: {} TX: {}\nIP: {}",
@@ -138,25 +137,21 @@ fn main() {
                         dprint!(verbose;4;"Total Number of streams processed: {}", streams.total);
                     }
                     stats_timer = SystemTime::now();
-                    mash.retain(|_, p| //logins.contains(&k)
-                match p.last_check.elapsed(){
-                Ok(lc) => {
-                    if lc.as_secs() > 15 && p.id != config.my_id{
-                        logins.remove(&p.id);
-                        false
-                    } else {
-                        //p.talk_groups.ua_clear();
-                        p.talk_groups.retain(|_, t|{
-                            t.ua_clear()
+                    mash.retain(|_, p| match p.last_check.elapsed() {
+                        Ok(lc) => {
+                            if lc.as_secs() > 15 && p.id != config.my_id {
+                                false
+                            } else {
+                                //p.talk_groups.ua_clear();
+                                p.talk_groups.retain(|_, t| t.ua_clear());
+                                true
+                            }
+                        }
+                        Err(e) => {
+                            dprint!(verbose;2;"Error parsing last check time: {}",e);
+                            false
+                        }
                     });
-                        true
-                    }
-                },
-                Err(e) => {
-                    dprint!(verbose;2;"Error parsing last check time: {}",e);
-                    false
-                }
-                });
                 }
             }
             Err(_) => {}
@@ -244,6 +239,17 @@ fn main() {
             }
             hb::DMRD => {
                 let hbp = hb::DMRDPacket::parse(rx_buff);
+
+                // Check to see if the sending peer is enabled //TODO: or known
+                match mash.get(&hbp.rpt) {
+                    Some(p) => {
+                        if !p.enabled {
+                            continue;
+                        }
+                    }
+                    None => {},
+                }
+
                 if streams.stream(hbp.si) {
                     dprint!(verbose;3;"Stream: {}, Timeout", hbp.si);
                     continue;
@@ -261,6 +267,10 @@ fn main() {
 
                 // Repeat to peers who are members of the same talkgroup and peer type.
                 for p in mash.values_mut() {
+                    // Only repeat to peers which are enabled
+                    if !p.enabled {
+                        continue;
+                    }
                     // Check we can lock slot. If the peer is simplex check if either slot is locked
                     match p.talk_groups.get_mut(&hbp.dst) {
                         Some(tg) => {
@@ -389,44 +399,43 @@ fn main() {
                     continue;
                 }
                 dprint!(verbose;4;"Peer: {} has logged in", peer.id);
-
-                if logins.insert(peer.id) {
-                    sock.send_to(&[hb::RPTACK, &rx_buff[4..8]].concat(), src)
-                        .unwrap();
-                }
+                peer.ip = src;
+                mash.insert(peer.id, peer);
+                sock.send_to(&[hb::RPTACK, &rx_buff[4..8]].concat(), src)
+                    .unwrap();
             }
             hb::RPTC => {
                 let mut peer = Peer::new();
                 peer.pid(&<[u8; 4]>::try_from(&rx_buff[4..8]).unwrap());
-                peer.ip = src;
 
-                if !logins.contains(&peer.id) {
-                    dprint!(verbose;4;"Unknown peer sent info {}", peer.id);
-                    continue;
+                match mash.get_mut(&peer.id) {
+                    Some(p) => {
+                        p.enabled = true;
+                        p.callsign = match str::from_utf8(&rx_buff[8..16]) {
+                            Ok(c) => c.to_owned(),
+                            Err(_) => "Unknown".to_owned(),
+                        };
+                        p.duplex = rx_buff[97] - 48;
+                        p.frequency = match str::from_utf8(&rx_buff[16..38]) {
+                            Ok(c) => c.to_owned(),
+                            Err(_) => "Unknown".to_owned(),
+                        };
+                        dprint!(verbose;4;"Callsign is: {}", p.callsign);
+                        dprint!(verbose;4;"Frequency is: {}", p.frequency);
+                        dprint!(verbose;4;"Peer duplex type is: {}", p.duplex);
+
+                        // To help set the correct offsets print info received in bytes
+                        dprint!(verbose;10;"Peer details raw");
+                        for (a, b) in rx_buff.iter().enumerate() {
+                            print!("{a}:{b:X}  ");
+                        }
+                        dprint!(verbose;10;"\n");
+                    }
+                    None => {
+                        dprint!(verbose;4;"Unknown peer sent info {}", peer.id);
+                        continue;
+                    }
                 }
-
-                peer.callsign = match str::from_utf8(&rx_buff[8..16]) {
-                    Ok(c) => c.to_owned(),
-                    Err(_) => "Unknown".to_owned(),
-                };
-                peer.duplex = rx_buff[97] - 48;
-                peer.frequency = match str::from_utf8(&rx_buff[16..38]) {
-                    Ok(c) => c.to_owned(),
-                    Err(_) => "Unknown".to_owned(),
-                };
-                dprint!(verbose;4;"Callsign is: {}", peer.callsign);
-                dprint!(verbose;4;"Frequency is: {}", peer.frequency);
-                dprint!(verbose;4;"Peer duplex type is: {}", peer.duplex);
-
-                // To help set the correct offsets print info received in bytes
-                dprint!(verbose;10;"Peer details raw");
-                for (a, b) in rx_buff.iter().enumerate() {
-                    print!("{a}:{b:X}  ");
-                }
-                dprint!(verbose;10;"\n");
-
-                mash.insert(peer.id, peer);
-
                 sock.send_to(&[hb::RPTACK, &rx_buff[4..8]].concat(), src)
                     .unwrap();
             }
