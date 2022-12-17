@@ -60,12 +60,14 @@ fn main() {
 
     let mut mash: HashMap<u32, Peer> = HashMap::new();
 
+    let master_ip: std::net::SocketAddr = config.master_ip.parse().unwrap();
+
     if config.my_id != 0 {
         let mut master = Peer::new();
         master.enabled = true;
         master.callsign = "PHOENIXF".to_owned();
         master.id = config.my_id;
-        master.ip = config.master_ip.parse().unwrap();
+        master.ip = master_ip;
         master.last_check = SystemTime::now();
         master.peer_type = Peertype::All;
         master.software = "IPSC2".to_owned();
@@ -116,7 +118,6 @@ fn main() {
     let dirty_master_options: bool = true;
 
     let myid = hb::RPTLPacket { id: config.my_id };
-
 
     let mut rx_buff = [0; hb::RX_BUFF_MAX];
 
@@ -175,7 +176,8 @@ fn main() {
             match state {
                 Masterstate::Disable => {}
                 Masterstate::LoginRequest => {
-                    sock.send_to(&myid.password_response(rx_buff), master.ip).unwrap();
+                    sock.send_to(&myid.password_response(rx_buff), master.ip)
+                        .unwrap();
                     dprint!(verbose;4;"sending password");
                     system.master_reconnects += 1;
                     sleep(10000);
@@ -238,14 +240,9 @@ fn main() {
             hb::DMRD => {
                 let hbp = hb::DMRDPacket::parse(rx_buff);
 
-                // Check to see if the sending peer is enabled //TODO: or known
-                match mash.get(&hbp.rpt) {
-                    Some(p) => {
-                        if !p.enabled {
-                            continue;
-                        }
-                    }
-                    None => {}
+                // Check to see if the sending peer is enabled
+                if !mash.get(&hbp.rpt).is_some() || src != master_ip {
+                    continue;
                 }
 
                 if streams.stream(hbp.si) {
