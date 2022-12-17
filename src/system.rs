@@ -8,6 +8,7 @@ use std::{fs, str, time};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     pub my_id: u32,
+    pub master_ip: String,
     pub verbose: u8,
 }
 

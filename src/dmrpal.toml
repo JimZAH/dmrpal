@@ -1,2 +1,3 @@
 my_id = 1
+master_ip = "78.129.135.43:55555"
 verbose = 10

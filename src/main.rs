@@ -32,6 +32,10 @@ fn closedown() {
 
 fn main() {
     let config = system::Config::load();
+    println!(
+        "My ID: {} | Master IP: {} | Verbose: {}",
+        config.my_id, config.master_ip, config.verbose
+    );
     let arg: Vec<String> = args().collect();
     let mut verbose: u8 = config.verbose;
     if arg.len() > 1 {
@@ -61,10 +65,7 @@ fn main() {
         master.enabled = true;
         master.callsign = "PHOENIXF".to_owned();
         master.id = config.my_id;
-        master.ip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(
-            std::net::Ipv4Addr::new(78, 129, 135, 43),
-            55555,
-        ));
+        master.ip = config.master_ip.parse().unwrap();
         master.last_check = SystemTime::now();
         master.peer_type = Peertype::All;
         master.software = "IPSC2".to_owned();
@@ -115,10 +116,7 @@ fn main() {
     let dirty_master_options: bool = true;
 
     let myid = hb::RPTLPacket { id: config.my_id };
-    let pip = std::net::SocketAddr::from(std::net::SocketAddrV4::new(
-        std::net::Ipv4Addr::new(78, 129, 135, 43),
-        55555,
-    ));
+
 
     let mut rx_buff = [0; hb::RX_BUFF_MAX];
 
@@ -177,13 +175,13 @@ fn main() {
             match state {
                 Masterstate::Disable => {}
                 Masterstate::LoginRequest => {
-                    sock.send_to(&myid.password_response(rx_buff), pip).unwrap();
+                    sock.send_to(&myid.password_response(rx_buff), master.ip).unwrap();
                     dprint!(verbose;4;"sending password");
                     system.master_reconnects += 1;
                     sleep(10000);
                 }
                 Masterstate::LoginPassword => {
-                    sock.send_to(&myid.info(), pip).unwrap();
+                    sock.send_to(&myid.info(), master.ip).unwrap();
                     dprint!(verbose;4;"sending info");
                     sleep(95000);
                 }
@@ -228,7 +226,7 @@ fn main() {
                         "TS1_1=23526;TS1_2=1;TS1_3=235;TS2_1=840;TS2_2=841;TS2_3=844;".to_string(),
                     );
                     dprint!(verbose;4;"Sending options to master");
-                    sock.send_to(&options, pip).unwrap();
+                    sock.send_to(&options, master.ip).unwrap();
                 }
             }
         }
@@ -247,7 +245,7 @@ fn main() {
                             continue;
                         }
                     }
-                    None => {},
+                    None => {}
                 }
 
                 if streams.stream(hbp.si) {
@@ -385,9 +383,6 @@ fn main() {
                 let randid = [0x0A, 0x7E, 0xD4, 0x98];
                 sock.send_to(&[hb::RPTACK, &rx_buff[4..8], &randid].concat(), src)
                     .unwrap();
-            }
-            hb::RPTCL => {
-                dprint!(verbose;2;"Todo!7");
             }
             hb::RPTK => {
                 let mut peer = Peer::new();

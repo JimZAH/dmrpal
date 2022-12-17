@@ -9,7 +9,6 @@ pub const MSTP: &[u8] = b"MSTP";
 pub const MSTC: &[u8] = b"MSTC";
 pub const RPTL: &[u8] = b"RPTL";
 pub const RPTPING: &[u8] = b"RPTPING";
-pub const RPTCL: &[u8] = b"RPTCL";
 pub const RPTACK: &[u8] = b"RPTACK";
 pub const RPTK: &[u8] = b"RPTK";
 pub const RPTC: &[u8] = b"RPTC";
