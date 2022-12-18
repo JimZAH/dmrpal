@@ -8,10 +8,8 @@ use std::collections::hash_map::HashMap;
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::{env::args, io, str, time::SystemTime};
 
-mod db;
 mod hb;
 
-const SOFTWARE_VERSION: u64 = 1;
 const USERACTIVATED_DISCONNECT_TG: u32 = 4000;
 
 #[derive(Debug, PartialEq)]
@@ -48,9 +46,6 @@ fn main() {
         }
     }
     dprint!(verbose;4;"Loading...");
-
-    // Check the DB!
-    let _db = db::init(SOFTWARE_VERSION);
 
     let mut state: Masterstate = Masterstate::Disable;
 
