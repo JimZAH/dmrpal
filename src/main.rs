@@ -253,7 +253,7 @@ fn main() {
                         hbp.src, hbp.dst, hbp.seq, hbp.sl, hbp.ct, hbp.si, payload_counter
                     );
                 }
-                let mut tx_buff: [u8; 55] = <[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
+                let mut tx_buff: [u8; 55] = hbp.construct();//<[u8; 55]>::try_from(&rx_buff[..55]).unwrap();
 
                 // Repeat to peers who are members of the same talkgroup and peer type.
                 for p in mash.values_mut() {

@@ -87,7 +87,7 @@ impl DMRDPacket {
         cbuf[11..15].copy_from_slice(&self.rpt.to_be_bytes());
 
         if self.sl == 2 {
-            cbuf[15] = 0x80;
+            cbuf[15] = 1;
         }
 
         if self.ct == 1 {
