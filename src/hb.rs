@@ -86,21 +86,22 @@ impl DMRDPacket {
 
         cbuf[11..15].copy_from_slice(&self.rpt.to_be_bytes());
 
-        if self.sl == 2 {
-            cbuf[15] = 1;
-        }
+        // This bit is broken because I suck at bitwise :-). Further testing before this can be used.
+        //if self.sl == 2 {
+        //    cbuf[15] = 1 << 1;
+        //}
 
-        if self.ct == 1 {
-            cbuf[15] |= 1 << 1;
-        }
-
-        if self.ft == 1 {
-            cbuf[15] |= 1 << 2;
-        } else if self.ft == 2 {
-            cbuf[15] |= 1 << 3;
-        } else if self.ft == 3 {
-            cbuf[15] |= 3 << 2;
-        }
+        //if self.ct == 1 {
+        //    cbuf[15] |= 1 << 1;
+        //}
+        //
+        //if self.ft == 1 {
+        //    cbuf[15] |= 1 << 2;
+        //} else if self.ft == 2 {
+        //    cbuf[15] |= 1 << 3;
+        //} else if self.ft == 3 {
+        //    cbuf[15] |= 3 << 2;
+        //}
 
         cbuf[16..20].copy_from_slice(&self.si.to_be_bytes());
         cbuf[20..55].copy_from_slice(&self.dd);
