@@ -236,7 +236,7 @@ fn main() {
                 let hbp = hb::DMRDPacket::parse(rx_buff);
 
                 // Check to see if the sending peer is enabled
-                if mash.get(&hbp.rpt).is_none() && src != master_ip {
+                if !mash.contains_key(&hbp.rpt) && src != master_ip {
                     continue;
                 }
 
